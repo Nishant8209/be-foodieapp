@@ -35,6 +35,7 @@ export interface Restaurant {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+ 
 }
 
 export interface OperatingHours {

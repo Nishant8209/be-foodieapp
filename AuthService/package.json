@@ -1,9 +1,11 @@
 {
   "name": "authservice",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
-    "start": "nodemon --exec ts-node src/index.ts"
+    "dev": "nodemon - exec 'ts-node' src/index.ts",
+    "build": "npm i && tsc",
+    "start": "node dist/index.js"
   },
   "author": "",
   "license": "ISC",

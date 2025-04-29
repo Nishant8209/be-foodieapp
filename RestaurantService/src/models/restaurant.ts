@@ -41,7 +41,8 @@ const restaurantSchema = new Schema<Restaurant>({
   featuredItems: [{ type: Schema.Types.ObjectId, ref: 'MenuItem' }],
   isActive: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+  updatedAt: { type: Date, default: Date.now },
+
 });
 
 export const RestaurantModel = mongoose.model<Restaurant>('Restaurant', restaurantSchema);
