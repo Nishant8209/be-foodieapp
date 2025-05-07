@@ -19,8 +19,7 @@ app.use(cors({
 app.use(morgan('dev'));
 app.use(cookieParser());
 
-
-app.use('/api/restaurant', routes);
+app.use('/api', routes);
 
 
 app.use((err: any, req: any, res: any, next: any) => {

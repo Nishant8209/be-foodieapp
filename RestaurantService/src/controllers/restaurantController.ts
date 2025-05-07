@@ -13,6 +13,7 @@ export const createRestaurant = async (req: Request, res: Response): Promise<voi
     }
 };
 export const getAllRestaurants = async (req: Request, res: Response): Promise<void> => {
+    console.log('sdshhdhSH')
     try {
         const restaurants = await getAllRestaurantsService(req.query as any);
         successResponse(res, restaurants, 'Restaurants fetched successfully', StatusCode.OK);

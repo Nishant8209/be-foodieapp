@@ -4,6 +4,7 @@ import { Request } from 'express';
 
 export const createProxy = (targetUrl: string) =>
   proxy(targetUrl, {
+    
     proxyReqPathResolver: (req: Request) => req.originalUrl,
     proxyReqOptDecorator: (proxyReqOpts, srcReq: Request) => {
       proxyReqOpts.headers = {
@@ -14,4 +15,5 @@ export const createProxy = (targetUrl: string) =>
       return proxyReqOpts;
     },
     userResDecorator: async (_proxyRes, proxyResData) => proxyResData,
+    
   });
