@@ -1,12 +1,12 @@
 import { Router } from 'express';
-import {createRestaurant, getAllRestaurants, getRestaurantById   } from '../controllers/restaurantController';
+import restaurantRoutes   from './restaurant';
+import productRoutes from './product';
+
 
 const router = Router();
 
-router.get('/',getAllRestaurants)
-router.post('/create',createRestaurant);
-router.get('/:id',getRestaurantById);
-
+router.use('/restaurant',restaurantRoutes);
+router.use('/products', productRoutes);
 
 
 export default router;
