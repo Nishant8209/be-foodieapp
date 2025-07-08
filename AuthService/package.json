@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon --exec ts-node src/index.ts"
+    "dev": "nodemon - exec 'ts-node' src/server.ts",
+    "build": "npm i && tsc",
+    "start": "node dist/server.js"
   },
   "author": "",
   "license": "ISC",

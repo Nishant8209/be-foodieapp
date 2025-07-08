@@ -31,7 +31,7 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
     failResponse(res, error?.message || error, StatusCode.Bad_Request)
   }
      
-};
+};  
 
 
 // Delete delete user
@@ -51,14 +51,15 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
 
 // Put update user
 export const updateUser = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const id = req.params.id;
-    const updatedUser: IUser | any = await updateUserService(id, req.body);
+  try { 
+
+    const id = req.params.id ;
+    const updatedUser: IUser | any = await updateUserService(id, req.body) ;
     if (updatedUser?.message) {
-      failResponse(res, updatedUser?.message, StatusCode.Bad_Request);
+      failResponse(res, updatedUser?.message, StatusCode.Bad_Request) ;
       return
     }
-    successResponse(res, updatedUser, Messages.User_Updated, StatusCode.OK);
+    successResponse(res, updatedUser, Messages.User_Updated, StatusCode.OK) ;
   } catch (err: any) {
     console.log('err', err)
     failResponse(res, err?.message || err, StatusCode.Bad_Request)
@@ -68,15 +69,15 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
 // Get user By Id
 export const getUserById = async (req: Request, res: Response): Promise<void> => {
   try {
-    const id = req.params.id;
-    console.log('id',id);
-    const user: IUser | any = await getUserByIdService(id);
+    const id = req.params.id ;
+    console.log('id',id) ;
+    const user: IUser | any = await getUserByIdService(id) ;
    
     if (user?.message) {
-      failResponse(res, user?.message, StatusCode.Bad_Request);
+      failResponse(res, user?.message, StatusCode.Bad_Request) ;
       return
     }
-    successResponse(res, user, Messages.User_Updated, StatusCode.OK);
+    successResponse(res, user, Messages.User_Updated, StatusCode.OK) ;
   } catch (err: any) {
     console.log('err', err)
     failResponse(res, err?.message || err, StatusCode.Bad_Request)
@@ -87,15 +88,15 @@ export const getUserById = async (req: Request, res: Response): Promise<void> =>
 // Verify Email
 export const verifyEmail = async (req: Request, res: Response): Promise<void> => {
   try {
-    const token: string = (req.query.token! || '') as string;
+    const token: string = (req.query.token! || '') as string ;
     console.log('token', token, req.params)
-    const user: any = await findUserByTokenService(token);
+    const user: any = await findUserByTokenService(token) ;
     console.log('user', user);
     if (user?.message) {
-      failResponse(res, user?.message, StatusCode.Bad_Request);
+      failResponse(res, user?.message, StatusCode.Bad_Request) ;
       return
     }
-    successResponse(res, '', Messages.Email_Verified, StatusCode.OK);
+    successResponse(res, '', Messages.Email_Verified, StatusCode.OK) ;
   } catch (err: any) {
     console.log('err', err)
     failResponse(res, err?.message || err, StatusCode.Bad_Request)
@@ -105,8 +106,8 @@ export const verifyEmail = async (req: Request, res: Response): Promise<void> =>
 //Update the User Address 
 export const updateUserAddress = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { userId } = req.params;
-    const newAddress = req.body;
+    const { userId } = req.params ;
+    const newAddress = req.body ;
     if (!userId) {
       failResponse(res, Messages.UserId_Required_To_Update_Address, StatusCode.Bad_Request)
       return;
@@ -134,19 +135,19 @@ export const updateUserAddress = async (req: Request, res: Response): Promise<vo
 // Delete the  User Address
 export const deleteUserAddress = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { userId } = req.params;
-    const { id } = req.body;
+    const { userId } = req.params ;
+    const { id } = req.body ;
     if (!userId) {
       failResponse(res, Messages.UserId_Required_To_Delete_Address, StatusCode.Bad_Request)
-      return;
+      return ;
     }
     if (!id) {
       failResponse(res, Messages.AddressId_Required_To_Update_Address, StatusCode.Bad_Request)
-      return;
+      return ;
     }
 
-    const userAddressUpdated = await deleteUserAddressService(userId, id);
-    successResponse(res, { id }, Messages.Address_Deleted, StatusCode.OK);
+    const userAddressUpdated = await deleteUserAddressService(userId, id) ;
+    successResponse(res, { id }, Messages.Address_Deleted, StatusCode.OK) ;
   } catch (err: any) {
     failResponse(res, err?.message || err, StatusCode.Bad_Request)
   }

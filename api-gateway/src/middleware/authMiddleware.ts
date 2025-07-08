@@ -19,7 +19,7 @@ export const auth = async (
   if (token) {
     try {
       const decoded = await verifyToken(token!);
-      console.log("decoded", decoded);
+      
       // Attach user to the request object (you can use this in your protected routes)
       req.user = decoded;
       next();

@@ -1,85 +1,113 @@
 import { Request, Response } from 'express';
-import { productService } from '../service/productService';
+import  * as productService from '../service/productService';
 import { Product } from '../models/product';
+import { buildFilter, buildProductAggregationPipeline } from '../service/productFilters';
+import { errorResponse, failResponse, successResponse } from '../utils/response';
+import { Messages } from '../utils/constants';
+import { StatusCode } from '../utils/StatusCodes';
+import { validationResult } from 'express-validator';
 
 
-export class ProductController {
+// Create new products (handling multiple products)
 
-  async createProduct(req: Request, res: Response): Promise<void> {
-    console.log('bdsbfkjdkjn')
+export const createProducts =  async (req: Request, res: Response): Promise<void>=> {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    failResponse(res, errors.array(), StatusCode.Bad_Request);
+    return;
+  }
     try {
-      const product = await productService.createProduct(req.body);
-      res.status(201).json({ success: true, data: product });
+      const product = await productService.createProducts(req.body);
+      successResponse(res, product, Messages.Success, StatusCode.Created);
     } catch (error) {
-      res.status(500).json({ success: false, message: 'Error creating product', error });
+      errorResponse(res, (error as Error).message);
+      return;
     }
   }
-  // Implement the getAllProducts function with filtering, sorting, and pagination
-   // Get all products with optional filtering, sorting, and pagination
-   async getAllProducts(req: Request, res: Response): Promise<void> {
+  
+// Get all products with filters and pagination
+  export const getAllProducts =  async (req: Request, res: Response): Promise<void> =>{
     try {
-      const { sortBy, page = 1, limit = 10, restaurantId, ...filterQuery } = req.query;
-  
-      // If restaurantId is provided, add it to the filterQuery
-      if (restaurantId) {
-        filterQuery.restaurantId = restaurantId;
-      }
-  
-      // Fetch products and metadata from the service
-      const { products, meta } = await productService.getAllProducts(
-        filterQuery as Record<string, any>,  // Filter query parameters
-        sortBy as string,  // Sorting (optional)
-        Number(page),  // Page number
-        Number(limit)   // Limit per page
+      const { sortBy, page = 1, limit = 10, restaurantId, ...restQuery } = req.query;
+      const filterQuery = {
+        ...restQuery,
+        ...(restaurantId && { restaurantId }), // add it only if it's present
+      };
+      const pipeline = await buildProductAggregationPipeline(
+        filterQuery,
+        sortBy as string,
+        Number(page),
+        Number(limit)
       );
   
-      // Return products and metadata in the response
-      res.status(200).json({ success: true, data: products, meta });
+
+      const products = await Product.aggregate(pipeline);
+      const totalCount = await Product.countDocuments(await buildFilter(filterQuery));
+      const hasMore = (Number(page) - 1) * Number(limit) + products.length < totalCount;
+      successResponse(res, {
+        products,
+        totalCount,
+        hasMore,
+        currentPage: Number(page),
+        totalPages: Math.ceil(totalCount / Number(limit)),
+      });
     } catch (error) {
-      res.status(500).json({ success: false, message: 'Error fetching products', error });
+      errorResponse(res, 'Error fetching products by filters');
     }
   }
-//update
-  async updateProduct(req: Request, res: Response): Promise<void> {
+  //update product
+  export const updateProduct = async (req: Request, res: Response): Promise<void> => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      failResponse(res, errors.array(), StatusCode.Bad_Request);
+      return;
+    }
     try {
-      const { productId } = req.params;
-      const updatedData = req.body;  // The data to update the product with
-
-      console.log('Attempting to update product with ID:', productId);  // Log the product ID
-
-      const updatedProduct = await productService.updateProduct(productId, updatedData);
-
-      if (!updatedProduct) {
-        res.status(404).json({ success: false, message: 'Product not found' });
+      const product = await productService.updateProduct(req.params.productId, req.body);
+      if (!product) {
+        failResponse(res, Messages.Product_Not_Found, StatusCode.Not_Found);
         return;
       }
-
-      res.status(200).json({ success: true, data: updatedProduct });
+      successResponse(res, product, Messages.Product_Created);
+      return;
     } catch (error) {
-      res.status(500).json({ success: false, message: 'Error updating product', error });
+      errorResponse(res, (error as Error).message);
+      return;
     }
-  }
+  };
+
 
   
-    // Delete a product by its ID
-    async deleteProduct(req: Request, res: Response): Promise<void> {
-        try {
-          const { productId } = req.params;
-          console.log('Attempting to delete product with ID:', productId);  // Log the product ID
-      
-          const deletedProduct = await productService.deleteProduct(productId);
-      
-          if (!deletedProduct) {
-            res.status(404).json({ success: false, message: 'Product not found' });
-            return;
-          }
-      
-          res.status(200).json({ success: true, message: 'Product deleted successfully' });
-        } catch (error) {
-          res.status(500).json({ success: false, message: 'Error deleting product', error });
-        }
-      }
-      
-}
+ // Delete a product
+ export const deleteProduct = async (req: Request, res: Response): Promise<void> => {
+  try {
+    
+    const product = await productService.deleteProduct(req.params.productId) ;
+    if (!product) {
+      failResponse(res, Messages.Product_Not_Found, StatusCode.Not_Found) ;
+      return;
+    }
+    successResponse(res, [],Messages.Product_Deleted, StatusCode.No_Content) ;
+    return;
+  } catch (error) {
+    errorResponse(res, (error as Error).message) ;
+    return;
+  }
+};
 
-export const productController = new ProductController();
+// Get a product by ID
+export const getProductById = async (req: Request, res: Response): Promise<void> => {
+  try {
+   
+    const product = await productService.getProductById(req.params.productId) ;
+    if (!product) {
+      failResponse(res, Messages.No_Products_Found_For_This_Category, StatusCode.Not_Found) ;
+      return;
+    }
+    successResponse(res, { product }) ;
+    return;
+  } catch (error) {
+    errorResponse(res, (error as Error).message) ;
+    return;
+  }
+};
