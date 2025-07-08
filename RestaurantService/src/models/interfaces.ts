@@ -1,4 +1,5 @@
 import { ObjectId } from 'mongodb';
+import mongoose from 'mongoose';
 
 export interface Restaurant {
   _id: ObjectId;
@@ -10,6 +11,8 @@ export interface Restaurant {
     cover: string;
     gallery: string[];
   };
+  licenseNumber?: string;
+   restaurantType: 'veg' | 'non-veg' | 'mixed'
   address: {
     addressLine1: string;
     addressLine2?: string;
@@ -24,15 +27,18 @@ export interface Restaurant {
   };
   operatingHours: OperatingHours[];
   contactInfo: {
+    name:string;
     phone: string;
     email: string;
     website?: string;
   };
+  serviceModes: ('dine-in' | 'takeaway' | 'delivery')[];
   averageRating: number;
   totalRatings: number;
-  priceRange: 1 | 2 | 3 | 4; // $ to $$$$
+  isVerified: boolean;
   featuredItems: ObjectId[]; // References to MenuItem
   isActive: boolean;
+  ownerId: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -43,3 +49,5 @@ export interface OperatingHours {
   close: string; // HH:MM format
   isClosed: boolean;
 }
+
+

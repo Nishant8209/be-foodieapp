@@ -2,10 +2,6 @@
 const crypto = require('crypto');
 
 
-export const generateEmailVerificationToken = () => {
-    return crypto.randomBytes(32).toString('hex');
-}
-
 export const hashToken = (token: string, userEmail: string) => {
     const tokenHash = crypto.createHash('sha256').update(token + userEmail).digest('hex');
     return tokenHash;

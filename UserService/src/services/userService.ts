@@ -1,8 +1,9 @@
 import { ObjectId } from 'mongoose';
 import { IUser } from '../models/interfaces';
 import User from '../models/User';
-import { EmailSubjects, Messages } from '../utils/constants';
+import { Messages } from '../utils/constants';
 import { buildPaginationQuery, generateEmailVerificationToken, hashToken } from '../utils/appFunctions';
+import { publishUserCreated } from '../utils/publisher';
 
 export const getAllUsersService = async (query: { search: string, page: number, limit: number, userType: string, status: string }) => {
     try {
@@ -21,7 +22,8 @@ export const getAllUsersService = async (query: { search: string, page: number, 
                 $or: [
                     { firstName: { $regex: search, $options: 'i' } },
                     { lastName: { $regex: search, $options: 'i' } },
-                ],
+                    { email: { $regex: search, $options: 'i' } }
+                ]
             })
         };
 
@@ -30,14 +32,14 @@ export const getAllUsersService = async (query: { search: string, page: number, 
         const totalPages = Math.ceil(totalRecords / limit);
         const hasMore = page < totalPages;
 
-        const selectedFields = `email userType lastName firstName status addresses`
+        const selectedFields = `email userType lastName firstName status addresses password isVerified`
         const users = await User.find(searchFilter)
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
             .select(selectedFields)
-            .exec(); 
-    
+            .exec();
+
         return {
             users,
             meta: {
@@ -72,18 +74,12 @@ export const createUserService = async (body: IUser): Promise<IUser | any> => {
         savedUser.createdBy = savedUser._id as ObjectId;
         savedUser.updatedBy = savedUser._id as ObjectId;
         await savedUser.save();
-        // await registrationEmail({
-        //     email: body.email,
-        //     firstName: body.firstName,
-        //     lastName: body.lastName,
-        //     token: savedUser.verificationToken || ''
-        // })
+
         return savedUser;
     } catch (err) {
         return err;
     }
 }
-
 
 
 export const deleteUserService = async (id: string) => {
@@ -112,7 +108,7 @@ export const updateUserService = async (id: string, data: any) => {
                 $push: { addresses: newAddress },
             }
         }
-        console.log('userUpdateObj',userUpdateObj);
+        console.log('userUpdateObj', userUpdateObj);
         const userUpdate = await User.findOneAndUpdate(
             { _id: id },
             userUpdateObj,
@@ -138,7 +134,7 @@ export const loginService = async (email: string) => {
 export const getUserByIdService = async (id: string) => {
     try {
         const selectedFields = `email userType lastName firstName status addresses isVerified `
-        const user=await User.findOne({ _id: id }, selectedFields);
+        const user = await User.findOne({ _id: id }, selectedFields);
         console.log('user');
         return user;
     } catch (err) {
@@ -187,7 +183,7 @@ export const updateUserAddressService = async (userId: any, newAddress: any) => 
         Object.keys(newAddress).forEach((key) => {
             updateFields[`addresses.$.${key}`] = newAddress[key];
         });
-        
+
         console.log('updateFields', updateFields)
         const userAddress = await User.updateOne(
             { _id: userId, "addresses._id": newAddress?.id },
@@ -203,13 +199,13 @@ export const updateUserAddressService = async (userId: any, newAddress: any) => 
 
 export const deleteUserAddressService = async (userId: string, addressId: string) => {
     try {
-       
+
         const userAddress = await User.updateOne(
-            { _id: userId}, 
+            { _id: userId },
             {
-              $pull: {
-                addresses: { _id: addressId } 
-              }
+                $pull: {
+                    addresses: { _id: addressId }
+                }
             }
         )
         return userAddress;

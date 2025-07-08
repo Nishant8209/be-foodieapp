@@ -1,13 +1,14 @@
 import { Router } from 'express';
-import { productController } from '../controllers/productController';
+import { createProducts, deleteProduct, getAllProducts, getProductById, updateProduct } from '../controllers/productController';
 
 
 const router = Router();
 
 
-router.post('/create', productController.createProduct);
-router.get('/', productController.getAllProducts);
-router.delete('/:productId', productController.deleteProduct);
-router.put('/:productId', productController.updateProduct); 
+router.post('/create', createProducts);
+router.get('/', getAllProducts);
+router.delete('/:productId', deleteProduct);
+router.put('/:productId', updateProduct); 
+router.get('/:productId',getProductById); // Assuming you want to get a product by ID as well
 
 export default router;

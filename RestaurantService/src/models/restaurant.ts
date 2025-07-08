@@ -17,6 +17,13 @@ const restaurantSchema = new Schema<Restaurant>({
     cover: { type: String, default: '' },
     gallery: [{ type: String }]
   },
+  licenseNumber: String,
+  restaurantType: {
+    type: String,
+    enum: ['veg', 'non-veg', 'mixed'],
+    default: 'mixed',
+    required: true,
+  },
   address: {
     addressLine1: { type: String, required: true },
     addressLine2: { type: String },
@@ -31,13 +38,16 @@ const restaurantSchema = new Schema<Restaurant>({
   },
   operatingHours: [operatingHoursSchema],
   contactInfo: {
+    name: { type: String, required: true },
     phone: { type: String, required: true },
     email: { type: String, required: true },
     website: { type: String }
   },
+  isVerified: { type: Boolean, default: false },
+  serviceModes: [{ type: String, enum: ['dine-in', 'takeaway', 'delivery'] }],
+  ownerId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   averageRating: { type: Number, default: 0 },
   totalRatings: { type: Number, default: 0 },
-  priceRange: { type: Number, required: true, min: 1, max: 4 },
   featuredItems: [{ type: Schema.Types.ObjectId, ref: 'MenuItem' }],
   isActive: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },
