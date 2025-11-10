@@ -5,6 +5,7 @@ import { failResponse, successResponse } from '../utils/response';
 import { StatusCode } from '../utils/StatusCodes';
 import { Messages, UserAddressFields } from '../utils/constants';
 import { uploadToCloudinary } from '../utils/UploadImage';
+import User from '../models/User';
 
 
 export interface UserQuery { search: string, page: number, limit: number, userType: string }
@@ -22,44 +23,47 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
 // POST create new user
 export const createUser = async (req: Request, res: Response): Promise<void> => {
   try {
+    // 1️⃣ Get Keycloak info from token (ensure route is protected with keycloak.protect())
+    const keycloakUserId = (req as any).kauth.grant?.access_token.content.sub;
+    const email = (req as any).kauth.grant?.access_token.content.email;
 
-     let data = { ...req.body };
+    if (!keycloakUserId || !email) {
+      failResponse(res, "Invalid Keycloak token", StatusCode.Unauthorized);
+      return;
+    }
+
+    // 2️⃣ Check if user already exists in MongoDB
+    let existingUser = await User.findOne({ keycloakId: keycloakUserId });
+    if (existingUser) {
+      failResponse(res, "User already exists", StatusCode.Bad_Request);
+      return;
+    }
+
+    // 3️⃣ Prepare user data
+    let data = { ...req.body, keycloakId: keycloakUserId, email };
+
+    // 4️⃣ Handle profile picture upload if any
     if (req.file) {
       try {
-        // Generate a unique filename
-        const filename = `user_${data.name}_${Date.now()}`;
-        
-        // Upload to Cloudinary
-        const cloudinaryUrl = await uploadToCloudinary(
-          req.file.buffer,
-          "user-profiles", // folder name in Cloudinary
-          filename
-        );
-
-        // Add the Cloudinary URL to the update data
+        const filename = `user_${email}_${Date.now()}`;
+        const cloudinaryUrl = await uploadToCloudinary(req.file.buffer, "user-profiles", filename);
         data.profilePic = cloudinaryUrl;
       } catch (uploadError: any) {
         console.error("Cloudinary upload error:", uploadError);
-        failResponse(
-          res,
-          "Failed to upload profile picture",
-          StatusCode.Internal_Server_Error
-        );
+        failResponse(res, "Failed to upload profile picture", StatusCode.Internal_Server_Error);
         return;
       }
     }
-    
-    const newUser: IUser | any = await createUserService({ ...data, createdBy: null, updatedBy: null });
-    if (newUser?.message === Messages.Duplicate_Email || !newUser?.email) {
-      failResponse(res, newUser?.message, StatusCode.Bad_Request)
-      return;
-    }
+
+    // 5️⃣ Save user in MongoDB
+    const newUser: IUser | any = await createUserService(data);
+
     successResponse(res, newUser, Messages.User_Created, StatusCode.Created);
   } catch (error: any) {
-    failResponse(res, error?.message || error, StatusCode.Bad_Request)
+    failResponse(res, error?.message || error, StatusCode.Bad_Request);
   }
-     
-};  
+};
+
 
 
 // Delete delete user

@@ -11,6 +11,7 @@ import { successResponse, failResponse } from "../utils/response";
 import { StatusCode } from "../utils/StatusCodes";
 import { uploadToCloudinary } from "../utils/UploadImage";
 import { RestaurantModel } from "../models/restaurant";
+import { Product } from "../models/product";
 
 // Create a new restaurant
 export const createRestaurant = async (req: Request, res: Response) => {
@@ -217,4 +218,37 @@ export const deleteRestaurantController = async (
             StatusCode.Internal_Server_Error
         );
     }
+};
+
+
+
+export const getSearchSuggestions = async (req: Request, res: Response) => {
+  try {
+    const { query } = req.query;
+    if (!query || typeof query !== "string") {
+      return res.json({ restaurants: [], products: [] });
+    }
+
+    // Fetch restaurant names
+    const restaurants = await RestaurantModel.find({
+      name: { $regex: query, $options: "i" }
+    })
+      .limit(5)
+      .select("name");
+
+    // Fetch product names
+    const products = await Product.find({
+      name: { $regex: query, $options: "i" }
+    })
+      .limit(5)
+      .select("name");
+
+    res.json({
+      restaurants: restaurants.map(r => r.name),
+      products: products.map(p => p.name),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Internal server error" });
+  }
 };

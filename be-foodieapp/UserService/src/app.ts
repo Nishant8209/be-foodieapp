@@ -3,10 +3,13 @@ const cors = require('cors');
 const morgan = require('morgan');
 const app: any = express();
 const cookieParser = require('cookie-parser');
+const Session =require('express-session')
 import path from 'path';
 import routes from './router'
 import { errorResponse } from './utils/response';
+import { keycloak } from './config/keyCloak';
 
+const memoryStore = new Session.MemoryStore();
 
 app.use(express.json());
 app.use(cors({
@@ -18,10 +21,11 @@ app.use(cors({
     credentials: true
 }
 ));
+
 app.use(morgan('dev'));
 app.use(cookieParser());
 
-app.use('/api/user', routes);
+app.use('/api/user',routes);
 
 
 app.use((err: any, req: any, res: any, next: any) => {

@@ -3,8 +3,8 @@ import { Restaurant, OperatingHours } from './interfaces';
 
 const operatingHoursSchema = new Schema<OperatingHours>({
   dayOfWeek: { type: Number, required: true, min: 0, max: 6 },
-  open: { type: String, required: function() { return !this.isClosed; } },
-  close: { type: String, required: function() { return !this.isClosed; } },
+  open: { type: String, required: function () { return !this.isClosed; } },
+  close: { type: String, required: function () { return !this.isClosed; } },
   isClosed: { type: Boolean, default: false }
 });
 
@@ -31,18 +31,18 @@ const restaurantSchema = new Schema<Restaurant>({
     state: { type: String, required: true },
     postalCode: { type: String, required: true },
     country: { type: String, required: true },
-   location: {   // Rename from 'coordinates' to 'location' (recommended)
-    type: {
-      type: String,
-      enum: ['Point'],
-      required: true,
-      default: 'Point'
-    },
-    coordinates: {
-      type: [Number],   // [longitude, latitude]
-      required: true
+    location: {   // Rename from 'coordinates' to 'location' (recommended)
+      type: {
+        type: String,
+        enum: ['Point'],
+        required: true,
+        default: 'Point'
+      },
+      coordinates: {
+        type: [Number],   // [longitude, latitude]
+        required: true
+      }
     }
-  }
   },
   operatingHours: [operatingHoursSchema],
   contactInfo: {
@@ -54,6 +54,7 @@ const restaurantSchema = new Schema<Restaurant>({
   isVerified: { type: Boolean, default: false },
   serviceModes: [{ type: String, enum: ['dine-in', 'takeaway', 'delivery'] }],
   ownerId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  acceptingOrders: { type: Boolean, default: false },
   averageRating: { type: Number, default: 0 },
   totalRatings: { type: Number, default: 0 },
   featuredItems: [{ type: Schema.Types.ObjectId, ref: 'MenuItem' }],

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { createProducts, deleteProduct, getAllProducts, getProductById, updateProduct } from '../controllers/productController';
 
 import upload from '../utils/upload';
+import { getSearchSuggestions } from '../controllers/restaurantController';
 
 
 const router = Router();
@@ -11,5 +12,5 @@ router.get('/', getAllProducts);
 router.get('/:productId',getProductById);
 router.put('/:productId', upload.array("images", 5), updateProduct);
 router.delete('/:productId', deleteProduct);
-
+router.get("/search-suggestions", getSearchSuggestions);
 export default router;

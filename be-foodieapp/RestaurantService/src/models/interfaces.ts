@@ -12,7 +12,8 @@ export interface Restaurant {
     gallery: string[];
   };
   licenseNumber?: string;
-   restaurantType: 'veg' | 'non-veg' | 'mixed'
+   restaurantType: 'veg' | 'non-veg' | 'mixed';
+    acceptingOrders:boolean;
   address: {
     addressLine1: string;
     addressLine2?: string;
@@ -33,6 +34,7 @@ export interface Restaurant {
     }
   }
   };
+ 
   operatingHours: OperatingHours[];
   contactInfo: {
     name:string;

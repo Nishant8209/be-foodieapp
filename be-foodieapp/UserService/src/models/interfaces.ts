@@ -31,7 +31,7 @@ export interface IUser extends IBasicFields {
   tokenCreatedAt: Date,
   hashedToken: string | null,
   favoriteProducts: string[],
-  
+  keycloakId:string,
   addresses: {
     street: string,
     city: string,

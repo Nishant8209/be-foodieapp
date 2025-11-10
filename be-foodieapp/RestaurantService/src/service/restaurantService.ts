@@ -5,7 +5,8 @@ import { RestaurantModel } from '../models/restaurant';
 import { buildPaginationQuery } from '../utils/appFunctions';
 import { validateRestaurantInput } from './restaurantFilter';
 import { verifyOwnerId } from '../utils/verifyOwnerId';
-
+import MenuItem from "../models/menu";
+import { Product } from '../models/product';
 
 
 
@@ -63,26 +64,58 @@ export const createRestaurantService = async (
   }
 };
 
-export const getAllRestaurantsService = async (query: {
-  name?: string;
-  city?: string;
-  cuisineType?: string;
-  isActive?: string;
-  page: number;
-  limit: number;
-  restaurantType?: 'veg' | 'non-veg' | 'mixed';
-}) => {
+
+
+export const getAllRestaurantsService = async (query: any) => {
   try {
     const { skip, limit, page } = buildPaginationQuery(query);
-    const { name, city, cuisineType, isActive, restaurantType } = query;
-  
+    const { name, city, cuisineType, isActive, restaurantType, productName } = query;
+
+    let restaurantIdsFromProducts: Types.ObjectId[] = [];
+
+    // ----------------------------
+    // filter based on product name
+    // ----------------------------
+    if (productName) {
+      // Use aggregation to be API strict compatible
+      const idsAgg = await Product.aggregate([
+        {
+          $match: { name: { $regex: productName, $options: "i" } }
+        },
+        {
+          $group: { _id: "$restaurantId" }
+        }
+      ]);
+
+      restaurantIdsFromProducts = idsAgg
+        .map((d: any) => d._id)
+        .filter((x: any) => x != null);
+
+      if (restaurantIdsFromProducts.length === 0) {
+        return {
+          restaurants: [],
+          meta: {
+            totalRecords: 0,
+            totalPages: 0,
+            currentPage: page,
+            limit,
+            hasMore: false
+          }
+        };
+      }
+    }
+
+    // ------------------------
+    // main restaurant filter
+    // ------------------------
     const searchFilter: any = {
       $and: [
-        isActive !== undefined ? { isActive: isActive === 'true' } : {},
+        isActive !== undefined ? { isActive: isActive === "true" } : {},
         cuisineType ? { cuisineTypes: cuisineType } : {},
-        city ? { 'address.city': { $regex: city, $options: 'i' } } : {},
-        name ? { name: { $regex: name, $options: 'i' } } : {},
+        city ? { "address.city": { $regex: city, $options: "i" } } : {},
+        name ? { name: { $regex: name, $options: "i" } } : {},
         restaurantType ? { restaurantType } : {},
+        productName ? { _id: { $in: restaurantIdsFromProducts } } : {}
       ].filter(Boolean),
     };
 
@@ -90,7 +123,8 @@ export const getAllRestaurantsService = async (query: {
     const totalPages = Math.ceil(totalRecords / limit);
     const hasMore = page < totalPages;
 
-    const selectedFields = `name description cuisineTypes address images  operatingHours contactInfo averageRating totalRatings licenseNumber restaurantType isVerified serviceModes ownerId`;
+    const selectedFields =
+      "name description cuisineTypes address images operatingHours contactInfo averageRating totalRatings licenseNumber restaurantType isVerified serviceModes ownerId acceptingOrders";
 
     const restaurants = await RestaurantModel.find(searchFilter)
       .sort({ createdAt: -1 })
@@ -106,20 +140,23 @@ export const getAllRestaurantsService = async (query: {
         totalPages,
         currentPage: page,
         limit,
-        hasMore,
-      },
+        hasMore
+      }
     };
-  } catch (err) {
-    console.error('Error fetching restaurants:', err);
-    throw new Error('Failed to fetch restaurants');
+
+  } catch (err: any) {
+    console.error("Error fetching restaurants:", err);
+    throw new Error(err?.message || "Failed to fetch restaurants");
   }
 };
+
+
 
 
 export const getRestaurantByIdService = async (id: string): Promise<Restaurant | null> => {
   try {
     // Only fetch selected fields
-    const selectedFields = `name description cuisineTypes address images  operatingHours contactInfo averageRating totalRatings`;
+    const selectedFields = `name description cuisineTypes address images  operatingHours contactInfo averageRating totalRatings acceptingOrders`;
 
     const restaurant = await RestaurantModel.findById(id).select(selectedFields);
 

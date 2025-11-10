@@ -61,12 +61,12 @@ export const getAllProductsService = async (query: {
 
         name ? { name: { $regex: name, $options: 'i' } } : null,
         restaurantType ? { restaurantType } : null,
-        restaurantId ? { _id: restaurantId } : null,
+        restaurantId ? { restaurantId: restaurantId } : null,
         category ? { category } : null,
         foodType ? { foodType } : null,
       ].filter(Boolean),
     };
-
+    console.log('restaurantId',restaurantId);
     const totalRecords = await Product.countDocuments(searchFilter);
     const totalPages = Math.ceil(totalRecords / limit);
     const hasMore = page < totalPages;
