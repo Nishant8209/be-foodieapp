@@ -57,29 +57,28 @@ export const getAllUsersService = async (query: { search: string, page: number, 
 }
 
 export const createUserService = async (body: IUser): Promise<IUser | any> => {
-  try {
-    // 1️⃣ Check for duplicate Keycloak user ID (instead of email/password)
-    const user = await User.findOne({ keycloakId: body.keycloakId });
-    if (user) {
-      return { message: Messages.Duplicate_Email, email: body.email };
+    try {
+        const user = await User.findOne({ email: body.email }, { email: 1 });
+        if (user) {
+            return {
+                message: Messages.Duplicate_Email,
+                email: body.email
+            };
+        }
+        const newUser = new User(body);
+        const savedUser = await newUser.save();
+        savedUser.verificationToken = generateEmailVerificationToken();
+        savedUser.hashedToken = hashToken(savedUser.verificationToken!, body.email)
+        savedUser.isVerified = false;
+        savedUser.createdBy = savedUser._id as ObjectId;
+        savedUser.updatedBy = savedUser._id as ObjectId;
+        await savedUser.save();
+
+        return savedUser;
+    } catch (err) {
+        return err;
     }
-
-    // 2️⃣ Create new user in MongoDB
-    const newUser = new User(body);
-
-    // Optional: generate verification token if needed (can be skipped if Keycloak handles email)
-    newUser.verificationToken = generateEmailVerificationToken();
-    newUser.hashedToken = hashToken(newUser.verificationToken!, body.email);
-    newUser.isVerified = false; // optional if you want email verification
-    newUser.createdBy = newUser._id as ObjectId;
-    newUser.updatedBy = newUser._id as ObjectId;
-
-    await newUser.save();
-    return newUser;
-  } catch (err) {
-    return err;
-  }
-};
+}
 
 
 
