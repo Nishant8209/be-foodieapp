@@ -5,6 +5,7 @@ import {
   getOrderById,
   updateOrder,
   deleteOrder,
+  getOrdersByUserID,
 } from '../controllers/orderController';
 import { validateOrder } from '../middlewares/orderValidations';
 
@@ -15,5 +16,6 @@ router.get('/order/', getAllOrders);
 router.get('/order/:id', getOrderById);
 router.put('/order/:id', updateOrder);
 router.delete('/order/:id', deleteOrder);
+router.get('/order/user/:userId', getOrdersByUserID);
 
 export default router;

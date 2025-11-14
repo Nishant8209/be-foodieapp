@@ -77,7 +77,6 @@ export const getAllRestaurantsService = async (query: any) => {
     // filter based on product name
     // ----------------------------
     if (productName) {
-      // Use aggregation to be API strict compatible
       const idsAgg = await Product.aggregate([
         {
           $match: { name: { $regex: productName, $options: "i" } }
@@ -90,19 +89,6 @@ export const getAllRestaurantsService = async (query: any) => {
       restaurantIdsFromProducts = idsAgg
         .map((d: any) => d._id)
         .filter((x: any) => x != null);
-
-      if (restaurantIdsFromProducts.length === 0) {
-        return {
-          restaurants: [],
-          meta: {
-            totalRecords: 0,
-            totalPages: 0,
-            currentPage: page,
-            limit,
-            hasMore: false
-          }
-        };
-      }
     }
 
     // ------------------------
@@ -113,11 +99,24 @@ export const getAllRestaurantsService = async (query: any) => {
         isActive !== undefined ? { isActive: isActive === "true" } : {},
         cuisineType ? { cuisineTypes: cuisineType } : {},
         city ? { "address.city": { $regex: city, $options: "i" } } : {},
-        name ? { name: { $regex: name, $options: "i" } } : {},
-        restaurantType ? { restaurantType } : {},
-        productName ? { _id: { $in: restaurantIdsFromProducts } } : {}
-      ].filter(Boolean),
+        restaurantType ? { restaurantType } : {}
+      ].filter(Boolean)
     };
+
+    // Add OR condition for restaurant name or product match
+    const orConditions: any[] = [];
+
+    if (name) {
+      orConditions.push({ name: { $regex: name, $options: "i" } });
+    }
+
+    if (productName && restaurantIdsFromProducts.length > 0) {
+      orConditions.push({ _id: { $in: restaurantIdsFromProducts } });
+    }
+
+    if (orConditions.length > 0) {
+      searchFilter.$and.push({ $or: orConditions });
+    }
 
     const totalRecords = await RestaurantModel.countDocuments(searchFilter);
     const totalPages = Math.ceil(totalRecords / limit);
@@ -143,7 +142,6 @@ export const getAllRestaurantsService = async (query: any) => {
         hasMore
       }
     };
-
   } catch (err: any) {
     console.error("Error fetching restaurants:", err);
     throw new Error(err?.message || "Failed to fetch restaurants");

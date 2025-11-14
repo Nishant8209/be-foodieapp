@@ -125,74 +125,85 @@ export const getRestaurantById = async (
 
 // Update a restaurant
 export const updateRestaurantController = async (req: Request, res: Response) => {
-    try {
-        const { restaurantId } = req.params;
+  try {
+    const { restaurantId } = req.params;
 
-        // Fetch existing restaurant to preserve old images
-        const existingRestaurant = await RestaurantModel.findById(restaurantId);
-        if (!existingRestaurant) {
-            return failResponse(res, "Restaurant not found", StatusCode.Not_Found);
-        }
-
-        const files = req.files as { [key: string]: Express.Multer.File[] };
-        const bodyImages = req.body.images ? JSON.parse(req.body.images) : {};
-
-        const images: any = {
-            logo: existingRestaurant.images?.logo || null,
-            cover: existingRestaurant.images?.cover || null,
-            gallery: Array.isArray(existingRestaurant.images?.gallery) ? existingRestaurant.images.gallery : [],
-        };
-
-        // Logo
-        if (files?.logo?.[0]) {
-            images.logo = await uploadToCloudinary(
-                files.logo[0].buffer,
-                "restaurants/logo",
-                files.logo[0].originalname
-            );
-        } else if (bodyImages.logo) {
-            images.logo = bodyImages.logo;
-        }
-
-        // Cover
-        if (files?.cover?.[0]) {
-            images.cover = await uploadToCloudinary(
-                files.cover[0].buffer,
-                "restaurants/cover",
-                files.cover[0].originalname
-            );
-        } else if (bodyImages.cover) {
-            images.cover = bodyImages.cover;
-        }
-
-        // Gallery → merge old + new
-        if (files?.gallery?.length) {
-            const uploadedGallery = await Promise.all(
-                files.gallery.map((file) =>
-                    uploadToCloudinary(file.buffer, "restaurants/gallery", file.originalname)
-                )
-            );
-
-            images.gallery = [
-                ...(Array.isArray(bodyImages.gallery) ? bodyImages.gallery : []),
-                ...uploadedGallery,
-            ];
-        } else if (bodyImages.gallery) {
-            images.gallery = Array.isArray(bodyImages.gallery) ? bodyImages.gallery : [bodyImages.gallery];
-        } else {
-            images.gallery = [];
-        }
-        const updateData = { ...req.body };
-        delete updateData.images;
-        updateData.images = images;
-
-        const updatedRestaurant = await updateRestaurantService(restaurantId, updateData);
-
-        successResponse(res, updatedRestaurant, "Restaurant updated successfully", StatusCode.OK);
-    } catch (err) {
-        console.error("Error in updateRestaurantController:", err);
-        failResponse(res, "Failed to update the restaurant", StatusCode.Internal_Server_Error);
+    // Fetch existing restaurant to preserve old images
+    const existingRestaurant = await RestaurantModel.findById(restaurantId);
+    if (!existingRestaurant) {
+      return failResponse(res, "Restaurant not found", StatusCode.Not_Found);
     }
+
+    const files = req.files as { [key: string]: Express.Multer.File[] };
+    const bodyImages = req.body.images ? JSON.parse(req.body.images) : {};
+
+    // Start with existing images
+    const images: any = {
+      logo: existingRestaurant.images?.logo || null,
+      cover: existingRestaurant.images?.cover || null,
+      gallery: Array.isArray(existingRestaurant.images?.gallery)
+        ? existingRestaurant.images.gallery
+        : [],
+    };
+
+    // ✅ Update logo only if new file is uploaded or passed explicitly
+    if (files?.logo?.[0]) {
+      images.logo = await uploadToCloudinary(
+        files.logo[0].buffer,
+        "restaurants/logo",
+        files.logo[0].originalname
+      );
+    } else if (bodyImages.logo) {
+      images.logo = bodyImages.logo; // keep body-provided one
+    }
+
+    // ✅ Update cover only if new file is uploaded or passed explicitly
+    if (files?.cover?.[0]) {
+      images.cover = await uploadToCloudinary(
+        files.cover[0].buffer,
+        "restaurants/cover",
+        files.cover[0].originalname
+      );
+    } else if (bodyImages.cover) {
+      images.cover = bodyImages.cover;
+    }
+
+    // ✅ Update gallery
+    if (files?.gallery?.length) {
+      const uploadedGallery = await Promise.all(
+        files.gallery.map((file) =>
+          uploadToCloudinary(file.buffer, "restaurants/gallery", file.originalname)
+        )
+      );
+
+      // merge old + new images
+      images.gallery = [
+        ...images.gallery, // old ones from DB
+        ...uploadedGallery, // newly uploaded
+      ];
+    } else if (bodyImages.gallery && Array.isArray(bodyImages.gallery)) {
+      // if gallery images are passed from frontend as strings (already uploaded)
+      images.gallery = bodyImages.gallery;
+    }
+    // else → no update, keep existing
+
+    // ✅ Prepare data to update
+    const updateData = { ...req.body };
+    delete updateData.images; // remove base64 or raw JSON
+    updateData.images = images;
+
+    const updatedRestaurant = await updateRestaurantService(restaurantId, updateData);
+
+    successResponse(
+      res,
+      updatedRestaurant,
+      "Restaurant updated successfully",
+      StatusCode.OK
+    );
+  } catch (err) {
+    console.error("Error in updateRestaurantController:", err);
+    failResponse(res, "Failed to update the restaurant", StatusCode.Internal_Server_Error);
+  }
 };
 
 

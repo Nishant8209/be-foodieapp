@@ -174,3 +174,31 @@ export const deleteOrder = async (req: Request, res: Response) => {
         return errorResponse(res, Messages.Fail, StatusCode.Internal_Server_Error, error.message);
     }
 };
+
+
+export const getOrdersByUserID = async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return failResponse(res, "User ID is required", StatusCode.Bad_Request);
+    }
+
+    // ✅ Call the service layer
+    const userOrders = await OrderService.getOrdersByUserIdService(userId);
+
+    if (!userOrders || userOrders.length === 0) {
+      return failResponse(res, "No orders found for this user", StatusCode.Not_Found);
+    }
+
+    // ✅ Send success response
+    return successResponse(res, userOrders, "Orders fetched successfully", StatusCode.OK);
+  } catch (error: any) {
+    console.error("Error fetching orders by user ID:", error);
+    return failResponse(
+      res,
+      "Failed to fetch user orders",
+      StatusCode.Internal_Server_Error
+    );
+  }
+};

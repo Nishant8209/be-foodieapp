@@ -12,7 +12,7 @@ const router = express.Router();
 const ORDER_SERVICE_URL = process.env.ORDER_SERVICE_URL as string;
 
 
-router.use('/', keycloakAuth(["Admin"]) as any, createProxy(ORDER_SERVICE_URL));
+router.use('/', auth as any, createProxy(ORDER_SERVICE_URL));
 
 
 export default router;

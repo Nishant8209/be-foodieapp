@@ -142,3 +142,14 @@ export const deleteOrder = async (id: string): Promise<boolean> => {
     throw error;
   }
 };
+
+
+export const getOrdersByUserIdService = async (userId: string) => {
+  try {
+    const orders = await OrderModel.find({ userId }).sort({ createdAt: -1 });
+    return orders;
+  } catch (error) {
+    console.error("Error in getOrdersByUserIdService:", error);
+    throw error;
+  }
+};
