@@ -12,7 +12,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cors({
     origin: [
         'http://localhost:3001',  
-        "http://localhost:5173"
+        "http://localhost:5173",
+        "https://apigateway-kl70.onrender.com"
     ], 
     credentials: true
 }
