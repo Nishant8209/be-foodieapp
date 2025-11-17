@@ -1,4 +1,6 @@
 import mongoose from "mongoose";
+import "../models/Product";
+
 import { IOrder } from "../models/interface";
 import OrderModel from "../models/order";
 import { Messages } from "../utils/constants";
@@ -89,6 +91,11 @@ export const getAllOrdersService = async (query: {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
+      .populate({
+        path: "items.foodId",
+        model: "Product",          // must match Product model name
+        select: "name price  images foodType category" // only needed product fields
+      })
       .select(selectedFields)
       .exec();
 
@@ -111,7 +118,13 @@ export const getAllOrdersService = async (query: {
 
 export const getOrderById = async (id: string): Promise<IOrder | null> => {
   try {
-    return await OrderModel.findById(id).exec();
+    return await OrderModel.findById(id)
+      .populate({
+        path: "items.foodId",
+        model: "Product", // matches the registered model name
+        select: "name price  images foodType category", // only needed fields
+      })
+      .exec();
   } catch (error) {
     console.error("Error fetching order by ID:", error);
     throw error;
@@ -143,10 +156,16 @@ export const deleteOrder = async (id: string): Promise<boolean> => {
   }
 };
 
-
 export const getOrdersByUserIdService = async (userId: string) => {
   try {
-    const orders = await OrderModel.find({ userId }).sort({ createdAt: -1 });
+    const orders = await OrderModel.find({ userId })
+      .sort({ createdAt: -1 })
+      .populate({
+        path: "items.foodId",       // populate the foodId in items
+        model: "Product",           // must match Product model name
+        select: "name price  images foodType category", // only return these fields
+      });
+
     return orders;
   } catch (error) {
     console.error("Error in getOrdersByUserIdService:", error);

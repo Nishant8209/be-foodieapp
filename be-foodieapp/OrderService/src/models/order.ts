@@ -3,11 +3,10 @@ import { IOrder, OrderStatus, PaymentStatus } from './interface';
 
 // Order item schema
 const OrderItemSchema = new Schema({
-  foodId: { type: Schema.Types.ObjectId, ref: 'Food', required: true },
+  foodId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
   quantity: { type: Number, required: true },
-  price: { type: Number, required: true }, // price snapshot
+  price: { type: Number, required: true },
 });
-
 
 const OrderSchema = new Schema<IOrder> (
   {
