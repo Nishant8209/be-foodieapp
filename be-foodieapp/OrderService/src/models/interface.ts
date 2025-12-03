@@ -6,20 +6,20 @@ export interface IOrderItem {
   price: number;
 }
 export enum OrderStatus {
-  Pending = "Pending",           
-  Confirmed = "Confirmed",        
-  Preparing = "Preparing",         
+  Pending = "Pending",
+  Confirmed = "Confirmed",
+  Preparing = "Preparing",
   ReadyForPickup = "ReadyForPickup",
   OutForDelivery = "OutForDelivery",
-  Delivered = "Delivered",          
-  Cancelled = "Cancelled",         
-  Failed = "Failed",              
-  Returned = "Returned"           
+  Delivered = "Delivered",
+  Cancelled = "Cancelled",
+  Failed = "Failed",
+  Returned = "Returned"
 }
 export const PaymentStatus = {
-    Pending: 'Pending',
-    Paid: 'Paid',
-    Failed: 'Failed'
+  Pending: 'Pending',
+  Paid: 'Paid',
+  Failed: 'Failed'
 }
 
 export interface IOrder extends Document {
@@ -35,7 +35,7 @@ export interface IOrder extends Document {
     couponCode: string;
     amount: number;
   };
-  deliveryAddress:  {
+  deliveryAddress: {
     addressLine1: string;
     addressLine2?: string;
     city: string;
@@ -55,11 +55,15 @@ export interface IOrder extends Document {
   totalAmount: number;
   taxAmount: number;
   shippingCost: number;
- 
+
   isActive: boolean;
   createdAt: Date;
   createdBy: ObjectId;
   updatedAt: Date;
   updatedBy: ObjectId;
   version: number;
+  deliveryBoyId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "DeliveryBoy",
+  }
 }

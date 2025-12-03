@@ -8,7 +8,7 @@ const OrderItemSchema = new Schema({
   price: { type: Number, required: true },
 });
 
-const OrderSchema = new Schema<IOrder> (
+const OrderSchema = new Schema<IOrder>(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -33,6 +33,12 @@ const OrderSchema = new Schema<IOrder> (
       enum: Object.values(OrderStatus),
       default: OrderStatus.Pending,
     },
+    deliveryBoyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
 
     discount: {
       couponCode: {
@@ -46,30 +52,30 @@ const OrderSchema = new Schema<IOrder> (
     },
 
     deliveryAddress: {
-    addressLine1: { type: String, required: true },
-    addressLine2: { type: String },
-    city: { type: String, required: true },
-    state: { type: String, required: true },
-    postalCode: { type: String, required: true },
-    country: { type: String, required: true },
-   location: {   
-    type: {
-      type: String,
-      enum: ['Point'],
-      required: true,
-      default: 'Point'
+      addressLine1: { type: String, required: true },
+      addressLine2: { type: String },
+      city: { type: String, required: true },
+      state: { type: String, required: true },
+      postalCode: { type: String, required: true },
+      country: { type: String, required: true },
+      location: {
+        type: {
+          type: String,
+          enum: ['Point'],
+          required: true,
+          default: 'Point'
+        },
+        coordinates: {
+          type: [Number],   // [longitude, latitude]
+          required: true
+        }
+      }
     },
-    coordinates: {
-      type: [Number],   // [longitude, latitude]
-      required: true
-    }
-  }
-  },
 
     paymentInfo: {
-        method: { type: String, required: true }, // e.g., 'Credit Card', 'PayPal', 'COD'
-        status: { type: String, default: PaymentStatus.Pending }, // 'Pending', 'Paid', 'Failed'
-        transactionId: { type: String }, // Optional, for tracking payment
+      method: { type: String, required: true }, // e.g., 'Credit Card', 'PayPal', 'COD'
+      status: { type: String, default: PaymentStatus.Pending }, // 'Pending', 'Paid', 'Failed'
+      transactionId: { type: String }, // Optional, for tracking payment
     },
 
     totalAmount: {

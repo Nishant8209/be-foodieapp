@@ -65,7 +65,8 @@ export const getAllOrdersService = async (query: {
 }) => {
   try {
     const { skip, limit, page } = buildPaginationQuery(query);
-    const { userId, restaurantId, orderStatus, orderId, restaurantType } = query;
+    const { userId, restaurantId, orderStatus, orderId, restaurantType } =
+      query;
 
     // Build dynamic search filter based on parameters, excluding empty values
     const searchFilter: any = {
@@ -93,8 +94,8 @@ export const getAllOrdersService = async (query: {
       .limit(limit)
       .populate({
         path: "items.foodId",
-        model: "Product",          // must match Product model name
-        select: "name price  images foodType category" // only needed product fields
+        model: "Product", // must match Product model name
+        select: "name price  images foodType category", // only needed product fields
       })
       .select(selectedFields)
       .exec();
@@ -114,7 +115,6 @@ export const getAllOrdersService = async (query: {
     throw new Error("Failed to fetch orders");
   }
 };
-
 
 export const getOrderById = async (id: string): Promise<IOrder | null> => {
   try {
@@ -156,19 +156,64 @@ export const deleteOrder = async (id: string): Promise<boolean> => {
   }
 };
 
-export const getOrdersByUserIdService = async (userId: string) => {
-  try {
-    const orders = await OrderModel.find({ userId })
-      .sort({ createdAt: -1 })
-      .populate({
-        path: "items.foodId",       // populate the foodId in items
-        model: "Product",           // must match Product model name
-        select: "name price  images foodType category", // only return these fields
-      });
+export const getOrdersByUserIdService = async (
+  userId: string,
+  query: any = {}
+): Promise<any> => {
+  const { skip, limit, page } = buildPaginationQuery(query);
+  const orderStatus = query.orderStatus;
+  // Base filter
+  const filter: any = { userId };
 
-    return orders;
-  } catch (error) {
-    console.error("Error in getOrdersByUserIdService:", error);
-    throw error;
+  // Apply orderStatus filter if provided
+  if (orderStatus && orderStatus !== "ALL") {
+    filter.orderStatus = orderStatus;
   }
+
+  const totalRecords = await OrderModel.countDocuments(filter);
+
+  const orders = await OrderModel.find(filter)
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .populate({
+      path: "items.foodId",
+      model: "Product",
+      select: "name price images foodType category",
+    });
+
+  const totalPages = Math.ceil(totalRecords / limit);
+  const hasMore = page < totalPages;
+
+  return {
+    orders,
+    meta: {
+      totalRecords,
+      totalPages,
+      currentPage: page,
+      limit,
+      hasMore,
+    },
+  };
 };
+
+export const getOrdersByDeliveryBoyIdService = async (
+  deliveryBoyId: string,
+  query: any = {} 
+):Promise <any>=>{
+ 
+  const filter: any = { deliveryBoyId };
+  const totalRecords = await OrderModel.countDocuments(filter);
+  const orders = await OrderModel.find(filter)
+    .sort({ createdAt: -1 })
+   
+    .populate({
+      path: "items.foodId",
+      model: "Product",
+      select: "name price images foodType category",
+    });   
+  return {
+    orders
+
+  };
+}
