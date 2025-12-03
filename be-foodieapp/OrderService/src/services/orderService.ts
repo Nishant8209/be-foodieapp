@@ -201,19 +201,29 @@ export const getOrdersByDeliveryBoyIdService = async (
   deliveryBoyId: string,
   query: any = {} 
 ):Promise <any>=>{
- 
+  const { skip, limit, page } = buildPaginationQuery(query);
   const filter: any = { deliveryBoyId };
   const totalRecords = await OrderModel.countDocuments(filter);
+    const totalPages = Math.ceil(totalRecords / limit);
+  const hasMore = page < totalPages;
+
   const orders = await OrderModel.find(filter)
     .sort({ createdAt: -1 })
-   
+    .skip(skip)
+    .limit(limit)
     .populate({
       path: "items.foodId",
       model: "Product",
       select: "name price images foodType category",
     });   
   return {
-    orders
-
+    orders,
+    meta: {
+      totalRecords,
+      totalPages,
+      currentPage: page,
+      limit,
+      hasMore,
+    },
   };
 }
