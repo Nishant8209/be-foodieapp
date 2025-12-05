@@ -26,6 +26,7 @@ import {
   findNearestAvailableDeliveryBoy,
   releaseDeliveryBoy,
 } from "../services/deliveryBoyservice";
+import { broadcastStatusUpdate } from "../utils/sse";
 
 // Create a new order
 export const createOrder = async (req: Request, res: Response) => {
@@ -123,6 +124,7 @@ export const getOrderById = async (req: Request, res: Response) => {
 };
 
 // Update order by ID
+// Add this import at the top of your file
 export const updateOrder = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -210,7 +212,6 @@ export const updateOrder = async (req: Request, res: Response) => {
       newOrder?.orderStatus === OrderStatus.ReadyForPickup &&
       order.orderStatus !== OrderStatus.ReadyForPickup
     ) {
-      // ensure we have coordinates to search
       const coords = order.deliveryAddress?.location?.coordinates;
       if (!coords || coords.length !== 2) {
         return failResponse(
@@ -220,10 +221,8 @@ export const updateOrder = async (req: Request, res: Response) => {
         );
       }
 
-      // const nearest = await findNearestAvailableDeliveryBoy(coords as [number, number], 5000); // 5km
       const nearest = { _id: "69243b5261a6533f0584fc83" };
       if (!nearest) {
-        // you can either fail here or continue without assignment. chosen: fail so restaurant knows
         return failResponse(
           res,
           "No delivery boy available nearby",
@@ -231,10 +230,7 @@ export const updateOrder = async (req: Request, res: Response) => {
         );
       }
 
-      // attach to newOrder
       newOrder.deliveryBoyId = nearest._id;
-
-      // update delivery boy record (mark busy)
       await assignDeliveryBoy(Object(nearest._id));
     }
 
@@ -244,18 +240,34 @@ export const updateOrder = async (req: Request, res: Response) => {
       newOrder
     );
 
+    if (!updatedOrder) {
+      return failResponse(
+        res,
+        "Failed to update order",
+        StatusCode.Internal_Server_Error
+      );
+    }
+
+    // ✅ BROADCAST SSE EVENT - SIMPLE STATIC DATA
+    broadcastStatusUpdate({
+      orderId: id,
+      oldStatus: order.orderStatus,
+      newStatus: updatedOrder.orderStatus,
+      deliveryBoyId: updatedOrder.deliveryBoyId,
+      timestamp: new Date().toISOString(),
+    });
+
+    console.log(
+      `✅ SSE broadcast sent for order ${id}: ${updatedOrder.orderStatus}`
+    );
 
     if (
       newOrder?.orderStatus === OrderStatus.Delivered &&
       updatedOrder?.deliveryBoyId
     ) {
-
-      
       try {
-
-   
+        // Your delivery boy release logic here
       } catch (err) {
-     
         console.error("Error releasing delivery boy:", err);
       }
     }

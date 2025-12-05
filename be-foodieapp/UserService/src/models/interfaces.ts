@@ -1,70 +1,79 @@
-import mongoose, { ObjectId, Document } from "mongoose";
+import mongoose, { Document, ObjectId } from "mongoose";
 
-
+// ----------------------------------------
+// Basic Fields Interface
+// ----------------------------------------
 export interface IBasicFields extends Document {
   isActive: boolean;
   createdAt: Date;
   createdBy: ObjectId;
   updatedAt: Date;
-  updatedBy: ObjectId,
-  status: string,
-  version: number
+  updatedBy: ObjectId;
+  status: string;
+  version: number;
 }
 
+// ----------------------------------------
+// Query Fields Interface
+// ----------------------------------------
 export interface BasicQueryFields {
-  search?: string,
-  page?: number,
-  limit?: number,
-  userType?: string,
-  status?: string
+  search?: string;
+  page?: number;
+  limit?: number;
+  userType?: string;
+  status?: string;
 }
-// User interface
+
+// ----------------------------------------
+// Address Interface
+// ----------------------------------------
+export interface IUserAddress {
+  street: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  phone: number;
+  location: {
+    type: "Point";
+    coordinates: [number, number]; // [longitude, latitude]
+  };
+}
+
+// ----------------------------------------
+// User Interface
+// ----------------------------------------
 export interface IUser extends IBasicFields {
   email: string;
   firstName: string;
-  lastName: string
+  lastName: string;
   password: string;
-  userType: UserType,
-  profilePic: string,
-  isVerified: Boolean,
-  verificationToken: string | null, // Invalidate the token
-  tokenCreatedAt: Date,
-  hashedToken: string | null,
-  favoriteProducts: string[],
-  keycloakId:string,
-  addresses: {
-    street: string,
-    city: string,
-    state: string,
-    zipCode: string,
-    country: string,
-    phone: number,
-    location: {   // Rename from 'coordinates' to 'location' (recommended)
-    type: {
-      type: String,
-      enum: ['Point'],
-      required: true,
-      default: 'Point'
-    },
-    coordinates: {
-      type: [Number],   // [longitude, latitude]
-      required: true
-    }
-  }
-  }[]
+  userType: UserType;
+  profilePic: string;
+  isVerified: boolean;
+  verificationToken: string | null;
+  tokenCreatedAt: Date;
+  hashedToken: string | null;
+  favoriteProducts: string[];
+  keycloakId: string;
+  addresses: IUserAddress[];
 }
 
+// ----------------------------------------
+// User Type Enum
+// ----------------------------------------
 export enum UserType {
-  CUSTOMER = 'customer',
-  VENDOR = 'vendor',
-  DELIVERY = 'delivery',
-  ADMIN = 'admin',
+  CUSTOMER = "customer",
+  VENDOR = "vendor",
+  DELIVERY = "delivery",
+  ADMIN = "admin",
 }
 
-// enums 
+// ----------------------------------------
+// Status Enum
+// ----------------------------------------
 export enum Status {
-  Active = 'active',
-  InActive = 'inactive',
-  Deleted = 'deleted'
+  Active = "active",
+  InActive = "inactive",
+  Deleted = "deleted",
 }
-
