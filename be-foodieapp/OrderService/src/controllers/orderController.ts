@@ -7,6 +7,7 @@ import {
   failResponse,
   successResponse,
 } from "../utils/response";
+
 import { StatusCode } from "../utils/StatusCodes";
 import { getAllOrdersService } from "../services/orderService";
 import {
@@ -14,6 +15,8 @@ import {
   buildProductAggregationPipeline,
 } from "../utils/orderFilters";
 import order from "../models/order";
+
+
 import {
   allowedOrderStatus,
   Messages,
@@ -27,6 +30,7 @@ import {
   releaseDeliveryBoy,
 } from "../services/deliveryBoyservice";
 import { broadcastStatusUpdate } from "../utils/sse";
+import { NotificationService } from "../services/NotificationService";
 
 // Create a new order
 export const createOrder = async (req: Request, res: Response) => {
@@ -206,6 +210,29 @@ export const updateOrder = async (req: Request, res: Response) => {
         );
       }
     }
+
+     if (newOrder?.orderStatus === OrderStatus.Confirmed) {
+      const notificationPayload = {
+        title: "Order Confirmed",
+        body: `Your order #${id} has been confirmed.`,
+        data: {
+          orderId: String(id),
+          status: String(newOrder.orderStatus),
+        },
+      };
+
+      try {
+        await NotificationService.sendPushNotificationToUser(
+          order.user, // make sure getOrderById populates user with fcmToken
+          notificationPayload
+        );
+      } catch (err) {
+        console.error("Error sending confirmation push:", err);
+        // Do not fail the order update because of notification error
+      }
+    }
+
+
 
     // ---------- ASSIGN DELIVERY BOY WHEN STATUS BECOMES READY ----------
     if (
