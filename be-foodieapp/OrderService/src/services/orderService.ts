@@ -199,12 +199,25 @@ export const getOrdersByUserIdService = async (
 
 export const getOrdersByDeliveryBoyIdService = async (
   deliveryBoyId: string,
-  query: any = {} 
-):Promise <any>=>{
+  query: any = {}
+): Promise<any> => {
   const { skip, limit, page } = buildPaginationQuery(query);
+  const { orderStatus } = query;
+
+  // base filter: by delivery boy
   const filter: any = { deliveryBoyId };
+
+  // optional filter: by order status (single or array)
+  if (orderStatus) {
+    if (Array.isArray(orderStatus)) {
+      filter.orderStatus = { $in: orderStatus };
+    } else {
+      filter.orderStatus = orderStatus;
+    }
+  }
+
   const totalRecords = await OrderModel.countDocuments(filter);
-    const totalPages = Math.ceil(totalRecords / limit);
+  const totalPages = Math.ceil(totalRecords / limit) || 1;
   const hasMore = page < totalPages;
 
   const orders = await OrderModel.find(filter)
@@ -212,10 +225,11 @@ export const getOrdersByDeliveryBoyIdService = async (
     .skip(skip)
     .limit(limit)
     .populate({
-      path: "items.foodId",
-      model: "Product",
-      select: "name price images foodType category",
-    });   
+      path: 'items.foodId',
+      model: 'Product',
+      select: 'name price images foodType category',
+    });
+
   return {
     orders,
     meta: {
@@ -226,4 +240,4 @@ export const getOrdersByDeliveryBoyIdService = async (
       hasMore,
     },
   };
-}
+};

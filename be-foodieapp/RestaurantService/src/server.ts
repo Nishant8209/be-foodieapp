@@ -7,30 +7,43 @@ const server = http.createServer(app);
 
 // Start server on the specified port
 const PORT = process.env.PORT || 5000;
+const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 
-// Connect Mongodb
-connetDataBase().then((res: any) => {
-   
-    
-    // Create HTTP server
+connetDataBase()
+  .then((res: any) => {
     server.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
+      console.log(`Server running on port ${PORT}`);
+
+      // 🔁 Self-ping every 10 minutes
+      setInterval(() => {
+        http
+          .get(`${BASE_URL}/health`, (res: any) => {
+            // optional: consume data
+            res.on("data", () => {});
+            res.on("end", () => {
+              console.log("Self-ping successful");
+            });
+          })
+          .on("error", (err: any) => {
+            console.error("Self-ping error:", err.message);
+          });
+      }, 10 * 60 * 1000); // 10 minutes in ms
     });
-}).catch((err: any) => {
-    console.log('err', err)
-    process.exit(1)
+  })
+  .catch((err: any) => {
+    console.log("err", err);
+    process.exit(1);
+  });
+
+process.on("SIGINT", async () => {
+  try {
+    await mongoose?.connection?.close();
+    console.log("MongoDB connection closed");
+    process.exit(0);
+  } catch (err) {
+    console.error("Error closing MongoDB connection:", err);
+    process.exit(1);
+  }
 });
 
-
-process.on('SIGINT', async () => {
-    try {
-        await mongoose?.connection?.close();
-        console.log('MongoDB connection closed');
-        process.exit(0);  // Exit process
-    } catch (err) {
-        console.error('Error closing MongoDB connection:', err);
-        process.exit(1);
-    }
-});
-
-export { };
+export {};

@@ -328,9 +328,7 @@ export const getOrdersByUserID = async (req: Request, res: Response) => {
       req.query
     );
 
-    if (!result.orders || result.orders.length === 0) {
-      return failResponse(res, "No orders found", StatusCode.Not_Found);
-    }
+    
 
     return successResponse(
       res,

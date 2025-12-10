@@ -25,7 +25,9 @@ app.use(morgan('dev'));
 app.use(cookieParser());
 
 app.use('/api', routes);
-
+app.get("/health", (req: any, res: any) => {
+  res.status(200).send("OK");
+});
 app.use((err: any, req: any, res: any, next: any) => {
     console.error(err.stack);
     errorResponse(res, 'Something went wrong!', 500, err)
