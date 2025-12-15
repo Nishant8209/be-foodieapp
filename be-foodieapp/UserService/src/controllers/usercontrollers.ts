@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { getAllUsersService, createUserService, deleteUserService, updateUserService, getUserByIdService, findUserByTokenService, updateUserAddressService, deleteUserAddressService } from '../services/userService';
+import { getAllUsersService, createUserService, deleteUserService, updateUserService, getUserByIdService, findUserByTokenService, updateUserAddressService, deleteUserAddressService, updateDeliveryBoyStatusService, findNearestAvailableDeliveryBoyService } from '../services/userService';
 import { IUser } from '../models/interfaces';
 import { failResponse, successResponse } from '../utils/response';
 import { StatusCode } from '../utils/StatusCodes';
@@ -222,3 +222,66 @@ export const deleteUserAddress = async (req: Request, res: Response): Promise<vo
     failResponse(res, err?.message || err, StatusCode.Bad_Request)
   }
 }
+
+
+export const getAvailableDeliveryBoyController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const lng = Number(req.query.lng);
+    const lat = Number(req.query.lat);
+
+    if (Number.isNaN(lng) || Number.isNaN(lat)) {
+      return res.status(400).json({ status: "Error", message: "Invalid coordinates" });
+    }
+
+    const rider = await findNearestAvailableDeliveryBoyService(lng, lat);
+
+    if (!rider) {
+      return res.status(200).json({
+        status: "NoRider",
+        message: "No delivery boy available nearby",
+        data: null,
+      });
+    }
+
+    return res.json({
+      status: "Success",
+      message: "Delivery boy found",
+      data: rider,
+    });
+  } catch (err) {
+    console.error("Error in getAvailableDeliveryBoyController:", err);
+    return res
+      .status(500)
+      .json({ status: "Error", message: "Internal server error" });
+  }
+};
+
+export const updateDeliveryBoyStatusController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body; // "available" | "busy" | "offline"
+    console.log('status',status)
+    if (!["available", "busy", "offline"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
+    }
+
+    const updated = await updateDeliveryBoyStatusService(id, status);
+
+    if (!updated) {
+      return res
+        .status(404)
+        .json({ message: "Delivery user not found" });
+    }
+
+    return res.json(updated);
+  } catch (err) {
+    console.error("Error in updateDeliveryBoyStatusController:", err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};

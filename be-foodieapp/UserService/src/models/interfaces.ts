@@ -55,8 +55,18 @@ export interface IUser extends IBasicFields {
   tokenCreatedAt: Date;
   hashedToken: string | null;
   favoriteProducts: string[];
-  keycloakId: string;
+  
   addresses: IUserAddress[];
+
+
+   // Delivery-only fields (used when userType === DELIVERY)
+  deliveryStatus?: DeliveryStatus;
+  maxConcurrentOrders?: number;
+  currentOrderIds?: ObjectId[];
+  currentLocation?: {
+    type: "Point";
+    coordinates: [number, number];
+  };
 }
 
 // ----------------------------------------
@@ -77,3 +87,6 @@ export enum Status {
   InActive = "inactive",
   Deleted = "deleted",
 }
+
+
+export type DeliveryStatus = "available" | "busy" | "offline";

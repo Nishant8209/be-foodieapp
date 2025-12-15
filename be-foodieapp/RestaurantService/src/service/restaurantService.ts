@@ -66,24 +66,34 @@ export const createRestaurantService = async (
 
 
 
+
 export const getAllRestaurantsService = async (query: any) => {
   try {
     const { skip, limit, page } = buildPaginationQuery(query);
-    const { name, city, cuisineType, isActive, restaurantType, productName } = query;
+    const {
+      name,
+      city,
+      cuisineType,
+      isActive,
+      restaurantType,
+      productName,
+      lng,
+      lat,
+    } = query;
+
+    const DEFAULT_MAX_DISTANCE_METERS = Number(
+      process.env.RESTAURANT_MAX_DISTANCE_METERS || 5000
+    );
+    // Convert meters to radians for $centerSphere
+    const EARTH_RADIUS_METERS = 6378137;
+    const radiusInRadians = DEFAULT_MAX_DISTANCE_METERS / EARTH_RADIUS_METERS;
 
     let restaurantIdsFromProducts: Types.ObjectId[] = [];
 
-    // ----------------------------
-    // filter based on product name
-    // ----------------------------
     if (productName) {
       const idsAgg = await Product.aggregate([
-        {
-          $match: { name: { $regex: productName, $options: "i" } }
-        },
-        {
-          $group: { _id: "$restaurantId" }
-        }
+        { $match: { name: { $regex: productName, $options: "i" } } },
+        { $group: { _id: "$restaurantId" } },
       ]);
 
       restaurantIdsFromProducts = idsAgg
@@ -91,19 +101,31 @@ export const getAllRestaurantsService = async (query: any) => {
         .filter((x: any) => x != null);
     }
 
-    // ------------------------
-    // main restaurant filter
-    // ------------------------
     const searchFilter: any = {
       $and: [
         isActive !== undefined ? { isActive: isActive === "true" } : {},
         cuisineType ? { cuisineTypes: cuisineType } : {},
         city ? { "address.city": { $regex: city, $options: "i" } } : {},
-        restaurantType ? { restaurantType } : {}
-      ].filter(Boolean)
+        restaurantType ? { restaurantType } : {},
+      ].filter(Boolean),
     };
 
-    // Add OR condition for restaurant name or product match
+    // Location filter using $geoWithin + $centerSphere
+    if (lng !== undefined && lat !== undefined) {
+      const lngNum = Number(lng);
+      const latNum = Number(lat);
+
+      if (!Number.isNaN(lngNum) && !Number.isNaN(latNum)) {
+        searchFilter.$and.push({
+          "address.location": {
+            $geoWithin: {
+              $centerSphere: [[lngNum, latNum], radiusInRadians],
+            },
+          },
+        });
+      }
+    }
+
     const orConditions: any[] = [];
 
     if (name) {
@@ -126,7 +148,7 @@ export const getAllRestaurantsService = async (query: any) => {
       "name description cuisineTypes address images operatingHours contactInfo averageRating totalRatings licenseNumber restaurantType isVerified serviceModes ownerId acceptingOrders";
 
     const restaurants = await RestaurantModel.find(searchFilter)
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: -1 }) // keep your normal sort
       .skip(skip)
       .limit(limit)
       .select(selectedFields)
@@ -139,8 +161,8 @@ export const getAllRestaurantsService = async (query: any) => {
         totalPages,
         currentPage: page,
         limit,
-        hasMore
-      }
+        hasMore,
+      },
     };
   } catch (err: any) {
     console.error("Error fetching restaurants:", err);

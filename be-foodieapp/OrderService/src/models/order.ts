@@ -1,6 +1,7 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document, Types } from 'mongoose';
 import { IOrder, OrderStatus, PaymentStatus } from './interface';
-
+import "../models/Product";
+import'../models/restaurant';
 // Order item schema
 const OrderItemSchema = new Schema({
   foodId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
@@ -33,9 +34,9 @@ const OrderSchema = new Schema<IOrder>(
       enum: Object.values(OrderStatus),
       default: OrderStatus.Pending,
     },
-    deliveryBoyId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+   deliveryBoyId: {
+      type: Schema.Types.ObjectId,
+      ref: "DeliveryBoy", // or "User", depending on your rider collection
       default: null,
     },
 

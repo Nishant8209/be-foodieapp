@@ -1,5 +1,5 @@
 import { ObjectId } from 'mongoose';
-import { IUser } from '../models/interfaces';
+import { DeliveryStatus, IUser, UserType } from '../models/interfaces';
 import User from '../models/User';
 import { Messages } from '../utils/constants';
 import { buildPaginationQuery, generateEmailVerificationToken, hashToken } from '../utils/appFunctions';
@@ -133,7 +133,7 @@ export const loginService = async (email: string) => {
 
 export const getUserByIdService = async (id: string) => {
     try {
-        const selectedFields = `email userType lastName firstName status addresses isVerified profilePic`
+        const selectedFields = `email userType lastName firstName status addresses isVerified profilePic deliveryStatus maxConcurrentOrders currentOrderIds currentLocation`
         const user = await User.findOne({ _id: id }, selectedFields);
         console.log('user');
         return user;
@@ -209,3 +209,32 @@ export const deleteUserAddressService = async (userId: string, addressId: string
         return err;
     }
 }
+
+
+export const findNearestAvailableDeliveryBoyService = async (
+  lng: number,
+  lat: number
+) => {
+   
+  return await User.findOne({
+    userType: UserType.DELIVERY,
+    deliveryStatus: "available",
+    currentLocation: {
+      $near: {
+        $geometry: { type: "Point", coordinates: [lng, lat] },
+        $maxDistance: 5000,
+      },
+    },
+  }).select("_id deliveryStatus currentLocation");
+};
+
+export const updateDeliveryBoyStatusService = async (
+  id: string,
+  status: DeliveryStatus
+) => {
+  return await User.findOneAndUpdate(
+    { _id: id, userType: UserType.DELIVERY },
+    { $set: { deliveryStatus: status } },
+    { new: true }
+  ).select("_id deliveryStatus");
+};

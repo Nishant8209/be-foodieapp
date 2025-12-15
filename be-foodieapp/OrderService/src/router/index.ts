@@ -21,7 +21,8 @@ router.get("/order/stream", (req, res) => {
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache",
     "Connection": "keep-alive",
-
+    // "Access-Control-Allow-Origin": "*",           // or your RN origin
+    // "Access-Control-Allow-Credentials": "true",
   });
   console.log("🔔 New SSE connection established for order updates");
   res.write(`event: connected\ndata: ${JSON.stringify({ message: "Connected to order updates" })}\n\n`);
@@ -39,6 +40,6 @@ router.get('/order/:id', getOrderById);
 router.put('/order/:id', updateOrder);
 router.delete('/order/:id', deleteOrder);
 router.get('/order/user/:userId', getOrdersByUserID);
-router.get('/order/deliveryboy/:deliveryBoyId',getOrdersByDeliveryBoyID);
+router.get('/order/deliveryboy/:deliveryBoyId', getOrdersByDeliveryBoyID);
 
 export default router;

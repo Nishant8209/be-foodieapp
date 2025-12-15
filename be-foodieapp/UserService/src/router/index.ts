@@ -1,6 +1,6 @@
 
 import { Router } from 'express';
-import {  createUser, deleteUser, deleteUserAddress, getUserById, getUsers, updateUser, updateUserAddress, verifyEmail } from '../controllers/usercontrollers';
+import {  createUser, deleteUser, deleteUserAddress, getAvailableDeliveryBoyController, getUserById, getUsers, updateDeliveryBoyStatusController, updateUser, updateUserAddress, verifyEmail } from '../controllers/usercontrollers';
 import upload from '../utils/upload';
 
 const router = Router();
@@ -14,5 +14,8 @@ router.get('/:id',  getUserById);
 
 router.put('/updateAddress/:userId',  updateUserAddress)
 router.put('/deleteAddress/:userId',  deleteUserAddress)
+
+router.get("/delivery/available", getAvailableDeliveryBoyController);
+router.put("/delivery/:id/status", updateDeliveryBoyStatusController);
 
 export default router;

@@ -1,139 +1,245 @@
 import { Schema, model } from 'mongoose';
-import { IUser, Status, UserType } from './interfaces';
+import { DeliveryStatus, IUser, Status, UserType } from './interfaces';
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
-
-const addressSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  type: {
-    type: String,
-    enum: ['home', 'work', 'other'],
-    default: 'home',
-    required: true,
-  },
-
-  addressLine1: { type: String, required: true },
-  addressLine2: { type: String }, // optional
-
-  street: { type: String, required: true }, // if still needed
-  city: { type: String, required: true },
-  state: { type: String, required: true },
-
-  postalCode: { type: String, required: true }, // mapped from interface
-  zipCode: { type: String }, // optional or remove if redundant with postalCode
-
-  country: { type: String, required: true },
-  location: {  
+const addressSchema = new Schema(
+  {
+    // optional label + type for UI
+    name: { type: String, required: false },
     type: {
       type: String,
-      enum: ['Point'],
-      required: true,
-      default: 'Point'
+      enum: ["home", "work", "other"],
+      default: "home",
     },
-    coordinates: {
-      type: [Number],   // [longitude, latitude]
-      required: true
-    }
-  },
-  isDefault: { type: Boolean, default: false },
 
-  phone: {
-    type: String,
-    required: true,
-    minlength: [10, 'Phone number must be at least 10 digits long'],
-    maxlength: [15, 'Phone number cannot exceed 15 digits'],
-    validate: {
-      validator: function (v: string) {
-        return /^\d+$/.test(v);
+    // Map your interface fields
+    street: { type: String, required: true },
+    city: { type: String, required: true },
+    state: { type: String, required: true },
+    zipCode: { type: String, required: true }, // interface zipCode
+    country: { type: String, required: true },
+
+    // GeoJSON location
+    location: {
+      type: {
+        type: String,
+        enum: ["Point"],
+        required: true,
+        default: "Point",
       },
-      message: (props: any) =>
-        `${props?.value} is not a valid phone number! Phone number should contain only digits.`,
+      coordinates: {
+        type: [Number], // [lng, lat]
+        required: true,
+      },
+    },
+
+    phone: {
+      type: String,
+      required: true,
+      minlength: [10, "Phone number must be at least 10 digits long"],
+      maxlength: [15, "Phone number cannot exceed 15 digits"],
+      validate: {
+        validator: function (v: string) {
+          return /^\d+$/.test(v);
+        },
+        message: (props: any) =>
+          `${props?.value} is not a valid phone number! Phone number should contain only digits.`,
+      },
+    },
+
+    isDefault: { type: Boolean, default: false },
+  },
+  { _id: false }
+);
+
+// ----------------------------------------
+// User schema
+// ----------------------------------------
+const userSchema = new Schema<IUser>(
+  {
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true,
+    },
+
+    firstName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    lastName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    password: {
+      type: String,
+      required: true,
+    },
+
+    userType: {
+      type: String,
+      enum: Object.values(UserType),
+      required: true,
+      default: UserType.CUSTOMER,
+    },
+
+    profilePic: {
+      type: String,
+      required: false,
+    },
+
+    addresses: {
+      type: [addressSchema],
+      required: false,
+      default: [],
+    },
+
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+
+    tokenCreatedAt: {
+      type: Date,
+    },
+
+    verificationToken: {
+      type: String,
+      default: null,
+    },
+
+    hashedToken: {
+      type: String,
+      default: null,
+    },
+
+    favoriteProducts: {
+      type: [String],
+      default: [],
+    },
+
+    // Delivery-only fields
+    deliveryStatus: {
+      type: String,
+      enum: ["available", "busy", "offline"],
+      default: "offline",
+      required: false,
+    } as unknown as { type: DeliveryStatus }, // TS hint
+
+    maxConcurrentOrders: {
+      type: Number,
+      default: 1,
+      required: false,
+    },
+
+    currentOrderIds: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Order",
+      },
+    ],
+
+   currentLocation: {
+      type: {
+        type: String,
+        enum: ["Point"],
+        required: false,
+      },
+      coordinates: {
+        type: [Number], // [lng, lat]
+        required: false,
+      },
+    },
+
+    status: {
+      type: String,
+      enum: Object.values(Status),
+      default: Status.Active,
+    },
+
+    version: { type: Number, default: 1 },
+
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now },
+
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+
+    isActive: {
+      type: Boolean,
+      default: true,
     },
   },
-});
-
-const userSchema = new Schema<IUser>({
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-
-  },
-
-  firstName: {
-    type: String,
-    require: true,
-  },
-  lastName: {
-    type: String,
-    require: true
-  },
-  password: {
-    type: String,
-    required: true,
-  },
-  userType: {
-    type: String,
-    enum: UserType,
-    require: true,
-    default: UserType.CUSTOMER
-  },
-  profilePic: {
-    type: String,
-    require: false,
-  },
-  addresses: [{
-    type: addressSchema,
-    required: false
-  }],
-  isVerified: {
-    type: Boolean,
-    required: false,
-  },
-  tokenCreatedAt: {
-    type: Date,
-    default: Date.now
-  },
-  verificationToken: {
-    type: String,
-    required: false
-  },
-  hashedToken: {
-    type: String,
-    required: false
-  },
-
-
-  status: { type: String, enum: Status, default: 'active' },
-  version: { type: Number, default: 1 },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now },
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', },
-  updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', },
-  isActive: { type: Boolean, default: true }
-}, {
-  timestamps: true,
-});
-
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next(); // Skip if password is not modified
-  const saltRounds = +`${process.env.PASSWORD_SALT}`;
-  this.password = await bcrypt.hash(this.password, saltRounds);
-  next();
-});
-
-userSchema.pre(['findOneAndUpdate', 'updateOne'], async function (next) {
-  const update = this.getUpdate() as any;
-  const password = update?.$set?.password;
-  if (password) {
-    const salt = await bcrypt.genSalt(+`${process.env.PASSWORD_SALT}`);
-    const hashedPassword = await bcrypt.hash(password, salt);
-    this.set({ password: hashedPassword });
+  {
+    timestamps: true,
   }
-  this.set({ updatedAt: new Date() });
+);
+
+// ----------------------------------------
+// Password hash hooks
+// ----------------------------------------
+userSchema.pre("save", async function (next) {
+  const doc = this as any;
+
+  if (!doc.isModified("password")) return next();
+
+  const saltRounds = Number(process.env.PASSWORD_SALT || 10);
+  const salt = await bcrypt.genSalt(saltRounds);
+  doc.password = await bcrypt.hash(doc.password, salt);
+
   next();
 });
 
-userSchema.index({ 'address.location': '2dsphere' });
+userSchema.pre(["findOneAndUpdate", "updateOne"], async function (next) {
+  const update = this.getUpdate() as any;
+  const password = update?.$set?.password ?? update?.password;
 
-export default model<IUser>('User', userSchema);
+  if (password) {
+    const saltRounds = Number(process.env.PASSWORD_SALT || 10);
+    const salt = await bcrypt.genSalt(saltRounds);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    if (update.$set) {
+      update.$set.password = hashedPassword;
+    } else {
+      update.password = hashedPassword;
+    }
+  }
+
+  // always bump updatedAt
+  if (!update.$set) update.$set = {};
+  update.$set.updatedAt = new Date();
+
+  next();
+});
+
+// ----------------------------------------
+// Indexes
+// ----------------------------------------
+
+// Geo index for address location
+userSchema.index({ "addresses.location": "2dsphere" });
+
+// Geo index for currentLocation (delivery boy live location)
+userSchema.index({ currentLocation: "2dsphere" });
+
+// For faster lookup by email + userType
+userSchema.index({ email: 1, userType: 1 }, { unique: true });
+
+// ----------------------------------------
+// Model export
+// ----------------------------------------
+const User = model<IUser>("User", userSchema);
+export default User;

@@ -22,15 +22,13 @@ import {
   Messages,
   orderAllowedUpdates,
   validOrderSequence,
+
 } from "../utils/constants";
 import { OrderStatus } from "../models/interface";
-import {
-  assignDeliveryBoy,
-  findNearestAvailableDeliveryBoy,
-  releaseDeliveryBoy,
-} from "../services/deliveryBoyservice";
+
 import { broadcastStatusUpdate } from "../utils/sse";
 import { NotificationService } from "../services/NotificationService";
+import { findNearestAvailableDeliveryBoy, setDeliveryBoyStatus } from "../services/deliveryBoyservice";
 
 // Create a new order
 export const createOrder = async (req: Request, res: Response) => {
@@ -128,12 +126,15 @@ export const getOrderById = async (req: Request, res: Response) => {
 };
 
 // Update order by ID
-// Add this import at the top of your file
+
+
+
 export const updateOrder = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
 
+    // populate restaurantId so we can read address
     const order: any = await OrderService.getOrderById(id);
     if (!order) {
       return failResponse(
@@ -144,7 +145,7 @@ export const updateOrder = async (req: Request, res: Response) => {
     }
 
     // Build newOrder only with allowed fields
-    let newOrder: any = {};
+    const newOrder: any = {};
     Object.keys(updateData).forEach((key) => {
       if (orderAllowedUpdates.includes(key)) {
         newOrder[key] = updateData[key];
@@ -162,9 +163,9 @@ export const updateOrder = async (req: Request, res: Response) => {
       );
     }
 
-    // Handle orderStatus-specific logic & validation
+    // ---------- STATUS VALIDATION ----------
     if (newOrder?.orderStatus) {
-      if (!allowedOrderStatus.includes(newOrder.orderStatus)) {
+      if (!Object.values(OrderStatus).includes(newOrder.orderStatus)) {
         return failResponse(
           res,
           Messages.Invalid_Order_Status,
@@ -172,7 +173,6 @@ export const updateOrder = async (req: Request, res: Response) => {
         );
       }
 
-      // Prevent changing from Cancelled -> Delivered or Delivered -> Cancelled
       if (
         newOrder.orderStatus === OrderStatus.Delivered &&
         order.orderStatus === OrderStatus.Cancelled
@@ -197,7 +197,7 @@ export const updateOrder = async (req: Request, res: Response) => {
 
       const currentStatusIndex = validOrderSequence.indexOf(order.orderStatus);
       const newStatusIndex = validOrderSequence.indexOf(newOrder.orderStatus);
-
+      console.log('currentStatusIndex', currentStatusIndex, newStatusIndex)
       if (
         newOrder.orderStatus !== OrderStatus.Cancelled &&
         (newStatusIndex <= currentStatusIndex ||
@@ -210,62 +210,86 @@ export const updateOrder = async (req: Request, res: Response) => {
         );
       }
     }
-
-     if (newOrder?.orderStatus === OrderStatus.Confirmed) {
-      const notificationPayload = {
-        title: "Order Confirmed",
-        body: `Your order #${id} has been confirmed.`,
-        data: {
-          orderId: String(id),
-          status: String(newOrder.orderStatus),
-        },
-      };
-
-      try {
-        await NotificationService.sendPushNotificationToUser(
-          order.user, // make sure getOrderById populates user with fcmToken
-          notificationPayload
-        );
-      } catch (err) {
-        console.error("Error sending confirmation push:", err);
-        // Do not fail the order update because of notification error
-      }
-    }
-
-
-
-    // ---------- ASSIGN DELIVERY BOY WHEN STATUS BECOMES READY ----------
     if (
-      newOrder?.orderStatus === OrderStatus.ReadyForPickup &&
-      order.orderStatus !== OrderStatus.ReadyForPickup
+      (newOrder.orderStatus === OrderStatus.OutForDelivery ||
+        newOrder.orderStatus === OrderStatus.Delivered) &&
+      !order.deliveryBoyId // still no assigned delivery boy
     ) {
-      const coords = order.deliveryAddress?.location?.coordinates;
+      return failResponse(
+        res,
+        "Cannot change to this status without an assigned delivery boy",
+        StatusCode.Bad_Request
+      );
+    }
+    // ---------- ASSIGN DELIVERY BOY WHEN STATUS BECOMES CONFIRMED ----------
+    if (
+      newOrder?.orderStatus === OrderStatus.Confirmed &&
+      order.orderStatus !== OrderStatus.Confirmed &&
+      !order.deliveryBoyId
+    ) {
+      const restaurant: any = order.restaurantId;
+      const coords = restaurant?.address?.location?.coordinates as
+        | [number, number]
+        | undefined;
+
+      console.log("restaurant coords", coords);
+
       if (!coords || coords.length !== 2) {
         return failResponse(
           res,
-          "Order is missing delivery coordinates",
+          "Restaurant is missing location coordinates",
           StatusCode.Bad_Request
         );
       }
 
-      const nearest = { _id: "69243b5261a6533f0584fc83" };
-      if (!nearest) {
-        return failResponse(
+      const nearestRes = await findNearestAvailableDeliveryBoy(coords);
+      console.log("nearestRes", nearestRes);
+
+      // no rider now -> confirm order but no driver
+      if (!nearestRes || nearestRes.status !== "Success" || !nearestRes.data) {
+        newOrder.deliveryBoyId = null;
+
+        const updatedOrder = await OrderService.updateOrderByIdService(
+          id,
+          newOrder
+        );
+
+        if (!updatedOrder) {
+          return failResponse(
+            res,
+            "Failed to update order",
+            StatusCode.Internal_Server_Error
+          );
+        }
+
+        broadcastStatusUpdate({
+          orderId: id,
+          oldStatus: order.orderStatus,
+          newStatus: updatedOrder.orderStatus,
+          deliveryBoyId: updatedOrder.deliveryBoyId,
+          timestamp: new Date().toISOString(),
+        });
+
+        return successResponse(
           res,
-          "No delivery boy available nearby",
-          StatusCode.Bad_Request
+          updatedOrder,
+          "No delivery boy available. Auto-assign will retry shortly.",
+          StatusCode.OK
         );
       }
 
-      newOrder.deliveryBoyId = nearest._id;
-      await assignDeliveryBoy(Object(nearest._id));
+      // rider exists
+      const rider = nearestRes.data;
+      if (rider?._id) {
+        newOrder.deliveryBoyId = rider._id as any; // mongoose will cast string to ObjectId
+        await setDeliveryBoyStatus(rider._id.toString(), "busy");
+      } else {
+        newOrder.deliveryBoyId = null;
+      }
     }
 
     // ---------- UPDATE ORDER ----------
-    const updatedOrder = await OrderService.updateOrderByIdService(
-      id,
-      newOrder
-    );
+    const updatedOrder = await OrderService.updateOrderByIdService(id, newOrder);
 
     if (!updatedOrder) {
       return failResponse(
@@ -275,7 +299,7 @@ export const updateOrder = async (req: Request, res: Response) => {
       );
     }
 
-    // ✅ BROADCAST SSE EVENT - SIMPLE STATIC DATA
+    // ---------- SSE BROADCAST ----------
     broadcastStatusUpdate({
       orderId: id,
       oldStatus: order.orderStatus,
@@ -288,12 +312,14 @@ export const updateOrder = async (req: Request, res: Response) => {
       `✅ SSE broadcast sent for order ${id}: ${updatedOrder.orderStatus}`
     );
 
+    // ---------- RELEASE DELIVERY BOY WHEN DELIVERED ----------
     if (
       newOrder?.orderStatus === OrderStatus.Delivered &&
       updatedOrder?.deliveryBoyId
     ) {
       try {
-        // Your delivery boy release logic here
+        const idStr = updatedOrder.deliveryBoyId.toString();
+        await setDeliveryBoyStatus(idStr, "available");
       } catch (err) {
         console.error("Error releasing delivery boy:", err);
       }
@@ -355,7 +381,7 @@ export const getOrdersByUserID = async (req: Request, res: Response) => {
       req.query
     );
 
-    
+
 
     return successResponse(
       res,

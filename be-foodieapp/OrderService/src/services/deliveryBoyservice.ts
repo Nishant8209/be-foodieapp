@@ -1,45 +1,42 @@
-import DeliveryBoy, { IDeliveryBoy } from '../models/DeliveryBoy';
-import mongoose from 'mongoose';
+// src/services/deliveryClient.ts
+import axios from "axios";
 
-const MAX_DISTANCE_METERS = 5000; // configurable radius
+const USER_SERVICE_URL = process.env.USER_SERVICE_URL as string;
 
-export const findNearestAvailableDeliveryBoy = async (
-  coords: [number, number],
-  maxDistance = MAX_DISTANCE_METERS
-): Promise<IDeliveryBoy | null> => {
-  // coords => [lng, lat]
-  const deliveryBoy = await DeliveryBoy.findOne({
-    isAvailable: true,
-    currentLocation: {
-      $near: {
-        $geometry: { type: 'Point', coordinates: coords },
-        $maxDistance: maxDistance,
-      },
-    },
-  })
-    .sort({ activeOrdersCount: 1 })
-    .exec();
+type DeliveryBoyApiResponse =
+  | {
+      status: "Success";
+      message: string;
+      data: {
+        _id: string;
+        deliveryStatus: string;
+        currentLocation: any;
+      };
+    }
+  | {
+      status: "NoRider" | "Error";
+      message: string;
+      data: null;
+    };
 
-  return deliveryBoy;
-};
-
-export const assignDeliveryBoy = async (deliveryBoyId: mongoose.Types.ObjectId) => {
-  // mark assigned: increment activeOrdersCount and mark unavailable if needed
-  return DeliveryBoy.findByIdAndUpdate(
-    deliveryBoyId,
-    { $inc: { activeOrdersCount: 1 }, isAvailable: false },
-    { new: true }
+export async function findNearestAvailableDeliveryBoy(
+  coords: [number, number]
+): Promise<DeliveryBoyApiResponse> {
+  const [lng, lat] = coords;
+  const res = await axios.get<DeliveryBoyApiResponse>(
+    `${USER_SERVICE_URL}/delivery/available`,
+    { params: { lng, lat } }
   );
-};
+  return res.data;
+}
 
-export const releaseDeliveryBoy = async (deliveryBoyId: mongoose.Types.ObjectId) => {
-  if (!deliveryBoyId) return null;
-  return DeliveryBoy.findByIdAndUpdate(
-    deliveryBoyId,
-    {
-      $inc: { activeOrdersCount: -1 },
-      $set: { isAvailable: true },
-    },
-    { new: true }
-  );
-};
+export async function setDeliveryBoyStatus(
+  deliveryBoyId: string,
+  status: "available" | "busy" | "offline"
+) {
+  await axios.put(`${USER_SERVICE_URL}/delivery/${deliveryBoyId}/status`, {
+    status,
+  });
+}
+
+

@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import "../models/Product";
-
+import'../models/restaurant';
 import { IOrder } from "../models/interface";
 import OrderModel from "../models/order";
 import { Messages } from "../utils/constants";
@@ -123,6 +123,11 @@ export const getOrderById = async (id: string): Promise<IOrder | null> => {
         path: "items.foodId",
         model: "Product", // matches the registered model name
         select: "name price  images foodType category", // only needed fields
+      })
+      .populate({
+        path: "restaurantId",
+        model: "Restaurant",
+        select: "address.location name",
       })
       .exec();
   } catch (error) {

@@ -1,4 +1,4 @@
-import mongoose, { ObjectId } from "mongoose";
+import mongoose, { ObjectId, Types } from "mongoose";
 
 export interface IOrderItem {
   foodId: string;
@@ -62,8 +62,6 @@ export interface IOrder extends Document {
   updatedAt: Date;
   updatedBy: ObjectId;
   version: number;
-  deliveryBoyId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "DeliveryBoy",
-  }
+deliveryBoyId: Types.ObjectId | null;
+  
 }
