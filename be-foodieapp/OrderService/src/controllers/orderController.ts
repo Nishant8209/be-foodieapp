@@ -26,7 +26,7 @@ import {
 } from "../utils/constants";
 import { OrderStatus } from "../models/interface";
 
-import { broadcastStatusUpdate } from "../utils/sse";
+import { broadcastEvent, broadcastStatusUpdate, broadcastToDeliveryBoy } from "../utils/sse";
 import { NotificationService } from "../services/NotificationService";
 import { findNearestAvailableDeliveryBoy, setDeliveryBoyStatus } from "../services/deliveryBoyservice";
 
@@ -71,6 +71,12 @@ export const createOrder = async (req: Request, res: Response) => {
 
     // 4. Create order
     const order = await OrderService.createOrder(orderData);
+
+    broadcastEvent({
+      type: "newOrder",
+      payload: order,
+    });
+
     return successResponse(
       res,
       order,
@@ -290,7 +296,18 @@ export const updateOrder = async (req: Request, res: Response) => {
 
     // ---------- UPDATE ORDER ----------
     const updatedOrder = await OrderService.updateOrderByIdService(id, newOrder);
-
+    if (updatedOrder?.deliveryBoyId) {
+      // Send to specific delivery boy
+      broadcastToDeliveryBoy(
+        updatedOrder.deliveryBoyId.toString(),
+        {
+          type: "orderAssigned",
+          orderId: id,
+          orderStatus: updatedOrder.orderStatus,
+          restaurantCoords: order.restaurantId?.address?.location?.coordinates,
+        }
+      );
+    }
     if (!updatedOrder) {
       return failResponse(
         res,

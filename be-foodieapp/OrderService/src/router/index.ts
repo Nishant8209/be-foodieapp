@@ -33,6 +33,27 @@ router.get("/order/stream", (req, res) => {
     removeSSEClient(res);
   });
 });
+// Add this route alongside your existing /order/stream
+router.get("/order/:deliveryBoyId/stream", (req, res) => {
+  const deliveryBoyId = req.params.deliveryBoyId;
+  
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    "Connection": "keep-alive",
+  });
+  
+  console.log(`🔔 DeliveryBoy SSE connection: ${deliveryBoyId}`);
+  res.write(`event: connected\ndata: ${JSON.stringify({ message: "Connected to delivery updates", deliveryBoyId })}\n\n`);
+
+  // Tag the response with deliveryBoyId
+  (res as any).deliveryBoyId = deliveryBoyId;
+  addSSEClient(res);
+
+  req.on("close", () => {
+    removeSSEClient(res);
+  });
+});
 
 
 router.get('/order/', getAllOrders);

@@ -4,14 +4,14 @@ import cron from "node-cron";
 import Order from "../models/order";
 import { OrderStatus } from "../models/interface";
 import { findNearestAvailableDeliveryBoy, setDeliveryBoyStatus } from "../services/deliveryBoyservice";
-import { broadcastStatusUpdate } from "./sse";
+import { broadcastStatusUpdate, broadcastToDeliveryBoy } from "./sse";
 
 // Run every 1 minute
 cron.schedule("*/1 * * * *", async () => {
   console.log("🔁 Auto-assign job running...");
 
   const pendingOrders = await Order.find({
-      orderStatus: {
+    orderStatus: {
       $in: [
         OrderStatus.Confirmed,
         OrderStatus.Preparing,
@@ -61,13 +61,26 @@ cron.schedule("*/1 * * * *", async () => {
 
       await setDeliveryBoyStatus(rider._id.toString(), "busy");
 
-      broadcastStatusUpdate({
-        orderId: ord._id.toString(),
-        oldStatus: OrderStatus.Confirmed,
-        newStatus: OrderStatus.Confirmed,
-        deliveryBoyId: ord.deliveryBoyId,
-        timestamp: new Date().toISOString(),
-      });
+      // After successful assignment in cron job
+      if (ord.deliveryBoyId) {
+        // Notify specific delivery boy
+        broadcastToDeliveryBoy(ord.deliveryBoyId.toString(), {
+          type: "orderAssigned",
+          orderId: ord._id.toString(),
+          orderStatus: ord.orderStatus,
+          restaurantCoords: coords,
+        });
+
+        // Existing broadcast
+        broadcastStatusUpdate({
+          orderId: ord._id.toString(),
+          oldStatus: OrderStatus.Confirmed,
+          newStatus: ord.orderStatus,
+          deliveryBoyId: ord.deliveryBoyId,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
 
       console.log(
         `🚴‍♂️ Auto-assigned rider ${rider._id} to order ${ord._id}`
