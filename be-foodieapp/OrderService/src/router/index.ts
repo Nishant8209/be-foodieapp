@@ -16,23 +16,24 @@ const router = express.Router();
 router.post('/order/create', validateOrder, createOrder);
 
 // routes/order-sse.ts
-router.get("/order/stream", (req, res) => {
-  res.writeHead(200, {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
-    "Connection": "keep-alive",
-    // "Access-Control-Allow-Origin": "*",           // or your RN origin
-    // "Access-Control-Allow-Credentials": "true",
-  });
-  console.log("🔔 New SSE connection established for order updates");
-  res.write(`event: connected\ndata: ${JSON.stringify({ message: "Connected to order updates" })}\n\n`);
+  router.get("/order/stream", (req, res) => {
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+      "Content-Encoding": "none",
+      // "Access-Control-Allow-Origin": "*",           // or your RN origin
+      // "Access-Control-Allow-Credentials": "true",
+    });
+    console.log("🔔 New SSE connection established for order updates");
+    res.write(`event: connected\ndata: ${JSON.stringify({ message: "Connected to order updates" })}\n\n`);
 
-  addSSEClient(res);
+    addSSEClient(res);
 
-  req.on("close", () => {
-    removeSSEClient(res);
+    req.on("close", () => {
+      removeSSEClient(res);
+    });
   });
-});
 // Add this route alongside your existing /order/stream
 router.get("/order/:deliveryBoyId/stream", (req, res) => {
   const deliveryBoyId = req.params.deliveryBoyId;
