@@ -5,7 +5,7 @@ const app: any = express();
 const cookieParser = require('cookie-parser');
 import routes from './router'
 import { errorResponse } from './utils/response';
-// import './utils/autoAssignJob'
+import './utils/autoAssignJob'
 
 app.use(express.json());
 app.use(cors({
