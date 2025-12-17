@@ -3,6 +3,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const app: any = express();
 const cookieParser = require('cookie-parser');
+import { createProxyMiddleware } from 'http-proxy-middleware';
 import routes from './routes/index'
 
 
@@ -22,7 +23,17 @@ app.use(cors({
 app.use(morgan('dev'));
 app.use(cookieParser());
 
+const ORDER_SERVICE_URL = process.env.ORDER_SERVICE_URL as string;
 
+
+app.use(
+  "/socket.io",
+  createProxyMiddleware({
+    target:`${ORDER_SERVICE_URL}`,
+    changeOrigin: true,
+    ws: true, // enable WebSocket proxying
+  })
+);
 app.use('/api', routes);
 app.get("/health", (req:any, res:any) => {
   res.status(200).send("OK");

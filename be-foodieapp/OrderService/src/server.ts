@@ -1,4 +1,5 @@
 import { connectRabbitMQ } from "./utils/rabbitmq";
+import { initSocket } from "./utils/socket";
 
 require("dotenv").config();
 const app = require("./app");
@@ -9,6 +10,10 @@ const server = http.createServer(app);
 const https = require("https"); 
 const PORT = process.env.PORT || 5000;
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
+
+
+initSocket(server); // initialize WS
+
 
 connetDataBase()
   .then((res: any) => {

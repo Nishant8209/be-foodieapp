@@ -5,6 +5,7 @@ import Order from "../models/order";
 import { OrderStatus } from "../models/interface";
 import { findNearestAvailableDeliveryBoy, setDeliveryBoyStatus } from "../services/deliveryBoyservice";
 import { broadcastStatusUpdate, broadcastToDeliveryBoy } from "./sse";
+import { emitOrderAssigned, emitOrderStatus } from "./socketEvents";
 
 // Run every 1 minute
 cron.schedule("*/1 * * * *", async () => {
@@ -62,24 +63,8 @@ cron.schedule("*/1 * * * *", async () => {
       await setDeliveryBoyStatus(rider._id.toString(), "busy");
 
       // After successful assignment in cron job
-      if (ord.deliveryBoyId) {
-        // Notify specific delivery boy
-        broadcastToDeliveryBoy(ord.deliveryBoyId.toString(), {
-          type: "orderAssigned",
-          orderId: ord._id.toString(),
-          orderStatus: ord.orderStatus,
-          restaurantCoords: coords,
-        });
-
-        // Existing broadcast
-        broadcastStatusUpdate({
-          orderId: ord._id.toString(),
-          oldStatus: OrderStatus.Confirmed,
-          newStatus: ord.orderStatus,
-          deliveryBoyId: ord.deliveryBoyId,
-          timestamp: new Date().toISOString(),
-        });
-      }
+      emitOrderAssigned(ord);
+      emitOrderStatus(ord, OrderStatus.Confirmed);
 
 
       console.log(

@@ -29,6 +29,10 @@ import { OrderStatus } from "../models/interface";
 import { broadcastEvent, broadcastStatusUpdate, broadcastToDeliveryBoy } from "../utils/sse";
 import { NotificationService } from "../services/NotificationService";
 import { findNearestAvailableDeliveryBoy, setDeliveryBoyStatus } from "../services/deliveryBoyservice";
+import { emitOrderAssigned, emitOrderStatus } from "../utils/socketEvents";
+
+
+
 
 // Create a new order
 export const createOrder = async (req: Request, res: Response) => {
@@ -267,14 +271,14 @@ export const updateOrder = async (req: Request, res: Response) => {
             StatusCode.Internal_Server_Error
           );
         }
-
-        broadcastStatusUpdate({
-          orderId: id,
-          oldStatus: order.orderStatus,
-          newStatus: updatedOrder.orderStatus,
-          deliveryBoyId: updatedOrder.deliveryBoyId,
-          timestamp: new Date().toISOString(),
-        });
+        emitOrderStatus(updatedOrder, order.orderStatus);
+        // broadcastStatusUpdate({
+        //   orderId: id,
+        //   oldStatus: order.orderStatus,
+        //   newStatus: updatedOrder.orderStatus,
+        //   deliveryBoyId: updatedOrder.deliveryBoyId,
+        //   timestamp: new Date().toISOString(),
+        // });
 
         return successResponse(
           res,
@@ -296,17 +300,10 @@ export const updateOrder = async (req: Request, res: Response) => {
 
     // ---------- UPDATE ORDER ----------
     const updatedOrder = await OrderService.updateOrderByIdService(id, newOrder);
-    if (updatedOrder?.deliveryBoyId) {
-      // Send to specific delivery boy
-      broadcastToDeliveryBoy(
-        updatedOrder.deliveryBoyId.toString(),
-        {
-          type: "orderAssigned",
-          orderId: id,
-          orderStatus: updatedOrder.orderStatus,
-          restaurantCoords: order.restaurantId?.address?.location?.coordinates,
-        }
-      );
+    console.log('updatedOrder',updatedOrder,order.orderStatus)
+    emitOrderStatus(updatedOrder, order.orderStatus);
+    if (updatedOrder?.deliveryBoyId && newOrder.orderStatus === OrderStatus.Confirmed) {
+      emitOrderAssigned(updatedOrder);
     }
     if (!updatedOrder) {
       return failResponse(
