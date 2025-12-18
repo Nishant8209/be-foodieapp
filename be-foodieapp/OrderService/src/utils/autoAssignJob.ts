@@ -6,6 +6,7 @@ import { OrderStatus } from "../models/interface";
 import { findNearestAvailableDeliveryBoy, setDeliveryBoyStatus } from "../services/deliveryBoyservice";
 import { broadcastStatusUpdate, broadcastToDeliveryBoy } from "./sse";
 import { emitOrderAssigned, emitOrderStatus } from "./socketEvents";
+import { getIO } from "./socket";
 
 // Run every 1 minute
 cron.schedule("*/1 * * * *", async () => {
@@ -63,9 +64,15 @@ cron.schedule("*/1 * * * *", async () => {
       await setDeliveryBoyStatus(rider._id.toString(), "busy");
 
       // After successful assignment in cron job
-      emitOrderAssigned(ord);
-      emitOrderStatus(ord, OrderStatus.Confirmed);
+      try {
+        const io = getIO();
+        emitOrderAssigned(ord);
+        emitOrderStatus(ord, OrderStatus.Confirmed);
+        console.log(`✅ Socket emit success for order ${ord._id}`);
+      } catch (socketError) {
+        console.error("Socket emit failed, calling HTTP fallback:", socketError);
 
+      }
 
       console.log(
         `🚴‍♂️ Auto-assigned rider ${rider._id} to order ${ord._id}`
